@@ -1,0 +1,18 @@
+enum Capability {
+  audioGeneration,
+  batchAPI,
+  caching,
+  codeExecution,
+  computerUse,
+  fileSearch,
+  flexInference,
+  functionCalling,
+  groundingWithGoogleMaps,
+  imageGeneration,
+  liveAPI,
+  priorityInference,
+  searchGrounding,
+  structuredOutputs,
+  thinking,
+  urlContext,
+}
