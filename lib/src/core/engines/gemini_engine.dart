@@ -7,48 +7,56 @@ import 'package:flutter_mind/src/core/configs/retry_config.dart';
 import 'package:flutter_mind/src/core/engines/ai_engine.dart';
 import 'package:flutter_mind/src/core/exceptions/flutter_mind_exception.dart';
 import 'package:flutter_mind/src/core/models/ai_model.dart';
+import 'package:flutter_mind/src/core/models/chat_message.dart';
 import 'package:flutter_mind/src/ai_request.dart';
 import 'package:flutter_mind/src/ai_response.dart';
 
 /// AI engine for Google Gemini models.
 ///
-/// Implements [AiEngine] using the Gemini REST API via [Dio].
-///
 /// ```dart
-/// // Simple setup — smart defaults applied automatically
+/// // Minimal setup — smart defaults applied automatically
 /// final gemini = GeminiEngine(apiKey: 'AIza...');
 ///
-/// // Custom setup
+/// // Full setup
 /// final gemini = GeminiEngine(
 ///   apiKey: 'AIza...',
-///   defaultConfig: GeminiConfig(
+///   config: GeminiConfig(
 ///     model: GeminiModel.pro25,
-///     temperature: 0.3,
-///     thinkingBudget: 2000,
+///     systemPrompt: 'You are a helpful assistant.',
+///     temperature: 0.7,
 ///   ),
 ///   timeout: Duration(seconds: 60),
 ///   retry: RetryConfig(maxAttempts: 3),
 /// );
 ///
-/// // Send a message
+/// // Send a single message
 /// final response = await gemini.send(userMessage: 'hello');
+/// print(response.text);
 ///
-/// // Stream a message
+/// // Stream a message chunk by chunk
 /// gemini.stream(userMessage: 'tell me a story').listen((chunk) {
-///   print(chunk);
+///   print(chunk); // prints as the model generates
 /// });
 ///
-/// // Override config per call
+/// // Multi-turn conversation
+/// final history = <ChatMessage>[];
+/// final r1 = await gemini.send(userMessage: 'My name is Mohamed.');
+/// history.add(ChatMessage.user('My name is Mohamed.'));
+/// history.add(ChatMessage.model(r1.text));
+/// final r2 = await gemini.send(userMessage: 'What is my name?', history: history);
+///
+/// // Override config for a single call only
 /// final response = await gemini.send(
-///   userMessage: 'solve this',
+///   userMessage: 'solve this hard problem',
 ///   config: GeminiConfig(
 ///     model: GeminiModel.pro25,
-///     thinkingBudget: 5000,
+///     thinkingLevel: ThinkingLevel.deep,
 ///   ),
 /// );
 /// ```
 ///
-/// Always call [dispose] when the engine is no longer needed.
+/// Always call [dispose] when the engine is no longer needed to close
+/// the underlying HTTP client and free resources.
 ///
 /// **API reference:** https://ai.google.dev/api/generate-content
 class GeminiEngine implements AiEngine {
@@ -56,32 +64,37 @@ class GeminiEngine implements AiEngine {
   ///
   /// [apiKey] is required — get yours at https://aistudio.google.com/apikey
   ///
-  /// [defaultConfig] is optional — smart defaults are applied automatically
-  /// based on the config you provide. See [_resolveSmartDefaults].
+  /// [config] is optional — smart defaults are applied automatically for any
+  /// field you leave unset. If you skip it entirely, the engine uses
+  /// [GeminiModel.flash25] with `temperature: 0.7`.
   ///
-  /// [timeout] defaults to 30 seconds.
+  /// [timeout] is the max time to wait for a response. Defaults to 30 seconds.
+  /// Increase this for thinking models or long responses.
   ///
-  /// [retry] defaults to [RetryConfig] — retries twice on safe error codes.
+  /// [retry] controls automatic retry on server errors. Defaults to 2 attempts
+  /// on status codes 429, 500, and 503. Use [RetryConfig.none] to disable.
   ///
-  /// [dio] is optional — pass your own configured instance if needed.
-  /// If not provided, the engine creates one internally.
   GeminiEngine({
     required String apiKey,
-    GeminiConfig? defaultConfig,
+    GeminiConfig? config,
     Duration timeout = const Duration(seconds: 30),
     RetryConfig retry = const RetryConfig(),
-    Dio? dio,
   })  : _apiKey = apiKey,
         _timeout = timeout,
         _retry = retry,
-        _defaultConfig = _resolveSmartDefaults(defaultConfig),
-        _dio = dio ?? Dio() {
+        _defaultConfig = _resolveSmartDefaults(config),
+        _dio = Dio(
+          BaseOptions(
+            baseUrl:
+                'https://generativelanguage.googleapis.com/v1beta/models/',
+            queryParameters: {'key': apiKey},
+            headers: {'Content-Type': 'application/json'},
+            sendTimeout: timeout,
+            receiveTimeout: timeout,
+          ),
+        ) {
     validate();
   }
-
-  // ─────────────────────────────────────────────
-  // PRIVATE FIELDS
-  // ─────────────────────────────────────────────
 
   final String _apiKey;
   final Duration _timeout;
@@ -89,55 +102,118 @@ class GeminiEngine implements AiEngine {
   final GeminiConfig _defaultConfig;
   final Dio _dio;
 
-  static const _baseUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models';
-
-  // ─────────────────────────────────────────────
-  // AiEngine — PUBLIC API
-  // ─────────────────────────────────────────────
-
+  
+  /// The model this engine uses by default.
+  ///
+  /// Set via [config] in the constructor. Falls back to [GeminiModel.flash25]
+  /// if no config was provided. Individual calls can override this via their
+  /// own `config` parameter.
   @override
   AiModel get model => _defaultConfig.model;
 
-  /// Sends a single request and returns the full response.
+  /// Sends a message and returns the complete [AiResponse].
   ///
-  /// Optionally pass [config] to override the [defaultConfig] for this
-  /// call only — only fields you set will override, rest use defaults.
+  /// Waits for the full response before returning. Use [stream] instead
+  /// for typing-effect UIs where you want output to appear as it is generated.
   ///
-  /// Throws [EngineException] on API errors.
+  /// [config] — optional per-call override. Only the fields you set replace
+  /// the engine defaults; everything else stays the same.
+  ///
+  /// [history] — optional list of previous [ChatMessage]s to give the model
+  /// context of the conversation so far. Pass turns in order, oldest first.
+  /// Omit for stateless single-turn requests.
+  ///
+  /// [maxHistoryMessages] — caps how many history messages are included.
+  /// When the list is longer, the oldest messages are dropped automatically
+  /// to keep token usage under control. Default: 20.
+  ///
+  /// ```dart
+  /// // Single-turn
+  /// final r = await gemini.send(userMessage: 'What is Dart?');
+  ///
+  /// // Multi-turn
+  /// final r = await gemini.send(
+  ///   userMessage: 'What did I just ask?',
+  ///   history: [ChatMessage.user('What is Dart?'), ChatMessage.model(r.text)],
+  /// );
+  /// ```
+  ///
+  /// Throws [EngineException] on API or network errors.
   /// Throws [ConfigException] if [config] is not a [GeminiConfig].
   @override
   Future<AiResponse> send({
     required String userMessage,
     AiConfig? config,
+    List<ChatMessage>? history,
+    int maxHistoryMessages = 20,
   }) async {
     final resolved = _mergeConfig(config);
-    final request = AiRequest(userMessage: userMessage, config: resolved);
+    final request = AiRequest(
+      userMessage: userMessage,
+      config: resolved,
+      history: history,
+      maxHistoryMessages: maxHistoryMessages,
+    );
     return _sendWithRetry(request);
   }
 
-  /// Streams the response word by word as it is generated.
+  /// Sends a message and returns the response as a [Stream] of text chunks.
   ///
-  /// Use for typing-effect UIs.
+  /// Each emitted chunk is a small piece of the response as the model generates
+  /// it. Use this for typing-effect UIs so the user sees output immediately
+  /// instead of waiting for the full response.
   ///
-  /// Optionally pass [config] to override the [defaultConfig] for this
-  /// call only.
+  /// [config], [history], and [maxHistoryMessages] behave exactly as in [send].
   ///
-  /// Throws [EngineException] on API errors.
+  /// ```dart
+  /// final buffer = StringBuffer();
+  /// await gemini.stream(userMessage: 'Tell me a story').forEach((chunk) {
+  ///   buffer.write(chunk);
+  ///   setState(() => text = buffer.toString());
+  /// });
+  /// ```
+  ///
+  /// Throws [EngineException] on API or network errors.
+  /// Throws [ConfigException] if [config] is not a [GeminiConfig].
   @override
   Stream<String> stream({
     required String userMessage,
     AiConfig? config,
+    List<ChatMessage>? history,
+    int maxHistoryMessages = 20,
   }) {
     final resolved = _mergeConfig(config);
-    final request = AiRequest(userMessage: userMessage, config: resolved);
+    final request = AiRequest(
+      userMessage: userMessage,
+      config: resolved,
+      history: history,
+      maxHistoryMessages: maxHistoryMessages,
+    );
     return _streamRequest(request);
   }
 
-  /// Returns the estimated token count for the given message and config.
+  /// Returns the token count for the given message under the current config.
   ///
-  /// Uses Gemini's real countTokens API for accurate results.
-  /// Falls back to rough estimation if the API call fails.
+  /// **This call is free — it does not consume any tokens.** Gemini counts
+  /// tokens without generating a response, so you are never billed for it.
+  /// Call it as often as needed before committing to a real [send] or [stream].
+  ///
+  /// Calls Gemini's real `countTokens` API for an accurate result.
+  /// If that call fails for any reason, falls back to a rough estimate
+  /// of 1 token per 4 characters.
+  ///
+  /// Use this to check if a message fits the model's context window or to
+  /// estimate cost before sending:
+  ///
+  /// ```dart
+  /// final tokens = await gemini.countTokens(userMessage: longText);
+  ///
+  /// if (tokens > 100000) {
+  ///   // trim or warn the user — no tokens spent
+  /// } else {
+  ///   final response = await gemini.send(userMessage: longText);
+  /// }
+  /// ```
   @override
   Future<int> countTokens({
     required String userMessage,
@@ -145,20 +221,13 @@ class GeminiEngine implements AiEngine {
   }) async {
     final resolved = _mergeConfig(config);
     try {
-      final url = '$_baseUrl/${resolved.model.value}:countTokens'
-          '?key=$_apiKey';
       final body = _buildRequestBody(
         userMessage: userMessage,
         config: resolved,
       );
       final response = await _dio.post(
-        url,
+        '${resolved.model.value}:countTokens',
         data: body,
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-          sendTimeout: _timeout,
-          receiveTimeout: _timeout,
-        ),
       );
       return response.data['totalTokens'] as int? ?? 0;
     } catch (_) {
@@ -176,7 +245,7 @@ class GeminiEngine implements AiEngine {
   Future<bool> isAvailable() async {
     try {
       await _dio.get(
-        '$_baseUrl/${_defaultConfig.model.value}?key=$_apiKey',
+        _defaultConfig.model.value,
         options: Options(
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
@@ -213,9 +282,6 @@ class GeminiEngine implements AiEngine {
   @override
   void dispose() => _dio.close();
 
-  // ─────────────────────────────────────────────
-  // PRIVATE — CONFIG
-  // ─────────────────────────────────────────────
 
   /// Merges a per-call config override with the stored default config.
   ///
@@ -229,28 +295,21 @@ class GeminiEngine implements AiEngine {
         'expected GeminiConfig. Use the matching engine for other providers.',
       );
     }
-    return GeminiConfig(
-      model: override.model ?? _defaultConfig.model,
-      systemPrompt: override.systemPrompt ?? _defaultConfig.systemPrompt,
-      temperature: override.temperature ?? _defaultConfig.temperature,
-      maxOutputTokens:
-          override.maxOutputTokens ?? _defaultConfig.maxOutputTokens,
-      stopSequences: override.stopSequences ?? _defaultConfig.stopSequences,
-      topP: override.topP ?? _defaultConfig.topP,
-      topK: override.topK ?? _defaultConfig.topK,
-      thinkingBudget:
-          override.thinkingBudget ?? _defaultConfig.thinkingBudget,
-      responseMimeType:
-          override.responseMimeType ?? _defaultConfig.responseMimeType,
-      responseSchema:
-          override.responseSchema ?? _defaultConfig.responseSchema,
-      candidateCount:
-          override.candidateCount ?? _defaultConfig.candidateCount,
-      seed: override.seed ?? _defaultConfig.seed,
-      presencePenalty:
-          override.presencePenalty ?? _defaultConfig.presencePenalty,
-      frequencyPenalty:
-          override.frequencyPenalty ?? _defaultConfig.frequencyPenalty,
+    return _defaultConfig.copyWith(
+      model: override.model,
+      systemPrompt: override.systemPrompt,
+      temperature: override.temperature,
+      maxOutputTokens: override.maxOutputTokens,
+      stopSequences: override.stopSequences,
+      topP: override.topP,
+      topK: override.topK,
+      thinkingLevel: override.thinkingLevel,
+      responseMimeType: override.responseMimeType,
+      responseSchema: override.responseSchema,
+      candidateCount: override.candidateCount,
+      seed: override.seed,
+      presencePenalty: override.presencePenalty,
+      frequencyPenalty: override.frequencyPenalty,
     );
   }
 
@@ -267,7 +326,7 @@ class GeminiEngine implements AiEngine {
     }
 
     final model = config.model;
-    final hasThinking = config.thinkingBudget != null;
+    final hasThinking = config.thinkingLevel != null;
     final hasStructuredOutput = config.responseMimeType != null;
 
     return GeminiConfig(
@@ -290,7 +349,7 @@ class GeminiEngine implements AiEngine {
       stopSequences: config.stopSequences,
       topP: config.topP,
       topK: config.topK,
-      thinkingBudget: config.thinkingBudget,
+      thinkingLevel: config.thinkingLevel,
       responseMimeType: config.responseMimeType,
       responseSchema: config.responseSchema,
       candidateCount: config.candidateCount,
@@ -299,10 +358,6 @@ class GeminiEngine implements AiEngine {
       frequencyPenalty: config.frequencyPenalty,
     );
   }
-
-  // ─────────────────────────────────────────────
-  // PRIVATE — HTTP
-  // ─────────────────────────────────────────────
 
   /// Sends a request with automatic retry on safe error codes.
   Future<AiResponse> _sendWithRetry(AiRequest request) async {
@@ -326,20 +381,15 @@ class GeminiEngine implements AiEngine {
   /// Sends a single generateContent request.
   Future<AiResponse> _sendRequest(AiRequest request) async {
     final config = request.config as GeminiConfig;
-    final url =
-        '$_baseUrl/${config.model.value}:generateContent?key=$_apiKey';
 
     try {
       final response = await _dio.post(
-        url,
+        '${config.model.value}:generateContent',
         data: _buildRequestBody(
           userMessage: request.userMessage,
           config: config,
-        ),
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-          sendTimeout: _timeout,
-          receiveTimeout: _timeout,
+          history: request.history,
+          maxHistoryMessages: request.maxHistoryMessages,
         ),
       );
       return _parseResponse(response.data, config.model);
@@ -351,26 +401,22 @@ class GeminiEngine implements AiEngine {
   /// Streams a streamGenerateContent request.
   Stream<String> _streamRequest(AiRequest request) async* {
     final config = request.config as GeminiConfig;
-    final url =
-        '$_baseUrl/${config.model.value}:streamGenerateContent'
-        '?key=$_apiKey&alt=sse';
 
     try {
       final response = await _dio.post<ResponseBody>(
-        url,
+        '${config.model.value}:streamGenerateContent',
         data: _buildRequestBody(
           userMessage: request.userMessage,
           config: config,
+          history: request.history,
+          maxHistoryMessages: request.maxHistoryMessages,
         ),
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-          responseType: ResponseType.stream,
-          sendTimeout: _timeout,
-          receiveTimeout: _timeout,
-        ),
+        options: Options(responseType: ResponseType.stream),
+        queryParameters: {'alt': 'sse'},
       );
 
       final stream = response.data!.stream
+          .cast<List<int>>()
           .transform(utf8.decoder)
           .transform(const LineSplitter());
 
@@ -393,25 +439,36 @@ class GeminiEngine implements AiEngine {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // PRIVATE — REQUEST BUILDING
-  // ─────────────────────────────────────────────
-
   /// Builds the JSON request body for generateContent.
   Map<String, dynamic> _buildRequestBody({
     required String userMessage,
     required GeminiConfig config,
+    List<ChatMessage>? history,
+    int maxHistoryMessages = 20,
   }) {
-    final body = <String, dynamic>{
-      'contents': [
+    final trimmed = history == null || history.isEmpty
+        ? const <ChatMessage>[]
+        : history.length > maxHistoryMessages
+            ? history.sublist(history.length - maxHistoryMessages)
+            : history;
+
+    final contents = [
+      for (final msg in trimmed)
         {
-          'role': 'user',
+          'role': msg.role,
           'parts': [
-            {'text': userMessage}
+            {'text': msg.text}
           ],
-        }
-      ],
-    };
+        },
+      {
+        'role': 'user',
+        'parts': [
+          {'text': userMessage}
+        ],
+      },
+    ];
+
+    final body = <String, dynamic>{'contents': contents};
 
     // System instruction
     if (config.systemPrompt != null && config.systemPrompt!.isNotEmpty) {
@@ -452,9 +509,9 @@ class GeminiEngine implements AiEngine {
     if (config.responseSchema != null) {
       generationConfig['responseSchema'] = config.responseSchema;
     }
-    if (config.thinkingBudget != null) {
+    if (config.thinkingLevel != null) {
       generationConfig['thinkingConfig'] = {
-        'thinkingBudget': config.thinkingBudget,
+        'thinkingBudget': config.thinkingLevel!.tokens,
       };
     }
 
@@ -464,10 +521,6 @@ class GeminiEngine implements AiEngine {
 
     return body;
   }
-
-  // ─────────────────────────────────────────────
-  // PRIVATE — RESPONSE PARSING
-  // ─────────────────────────────────────────────
 
   /// Parses a full generateContent response into [AiResponse].
   AiResponse _parseResponse(
@@ -529,10 +582,6 @@ class GeminiEngine implements AiEngine {
       return null;
     }
   }
-
-  // ─────────────────────────────────────────────
-  // PRIVATE — ERROR HANDLING
-  // ─────────────────────────────────────────────
 
   /// Converts a [DioException] into a meaningful [EngineException].
   EngineException _handleDioError(DioException e) {
