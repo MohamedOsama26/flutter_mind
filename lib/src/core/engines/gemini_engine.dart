@@ -606,6 +606,11 @@ class GeminiEngine implements AiEngine {
     }
 
     return switch (statusCode) {
+      400 => EngineException(
+          'GeminiEngine: bad request — ${raw ?? 'no details from server'}',
+          statusCode: 400,
+          raw: raw,
+        ),
       401 => EngineException(
           'GeminiEngine: invalid API key. '
           'Check your key at https://aistudio.google.com/apikey',
