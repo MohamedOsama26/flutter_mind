@@ -1,0 +1,25 @@
+<svg width="160" height="160" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>flutter_mind — neural mind icon</title>
+  <rect width="80" height="80" rx="20" fill="#0F0A1E"/>
+  <circle cx="40" cy="40" r="26" fill="none" stroke="#7C3AED" stroke-width="0.6" opacity="0.3"/>
+  <circle cx="40" cy="40" r="16" fill="none" stroke="#7C3AED" stroke-width="0.5" opacity="0.2"/>
+  <circle cx="40" cy="18" r="3.5" fill="#7C3AED"/>
+  <circle cx="58" cy="29" r="3" fill="#A78BFA"/>
+  <circle cx="58" cy="51" r="3" fill="#A78BFA"/>
+  <circle cx="40" cy="62" r="3.5" fill="#7C3AED"/>
+  <circle cx="22" cy="51" r="3" fill="#A78BFA"/>
+  <circle cx="22" cy="29" r="3" fill="#A78BFA"/>
+  <circle cx="40" cy="40" r="5" fill="#C084FC"/>
+  <line x1="40" y1="21" x2="40" y2="35" stroke="#7C3AED" stroke-width="1.2" opacity="0.7"/>
+  <line x1="55.4" y1="31" x2="44.3" y2="37.5" stroke="#A78BFA" stroke-width="1" opacity="0.6"/>
+  <line x1="55.4" y1="49" x2="44.3" y2="42.5" stroke="#A78BFA" stroke-width="1" opacity="0.6"/>
+  <line x1="40" y1="59" x2="40" y2="45" stroke="#7C3AED" stroke-width="1.2" opacity="0.7"/>
+  <line x1="24.6" y1="49" x2="35.7" y2="42.5" stroke="#A78BFA" stroke-width="1" opacity="0.6"/>
+  <line x1="24.6" y1="31" x2="35.7" y2="37.5" stroke="#A78BFA" stroke-width="1" opacity="0.6"/>
+  <line x1="40" y1="18" x2="58" y2="29" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+  <line x1="58" y1="29" x2="58" y2="51" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+  <line x1="58" y1="51" x2="40" y2="62" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+  <line x1="40" y1="62" x2="22" y2="51" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+  <line x1="22" y1="51" x2="22" y2="29" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+  <line x1="22" y1="29" x2="40" y2="18" stroke="#7C3AED" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4"/>
+</svg>
