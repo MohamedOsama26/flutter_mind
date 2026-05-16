@@ -12,9 +12,9 @@ part of 'flutter_mind_exception.dart';
 ///
 /// ```dart
 /// try {
-///   await FlutterMind.instance.send('');
+///   await FlutterMind.send(userMessage: '');
 /// } on ValidationException catch (e) {
-///   print(e.message); // 'FlutterMind: message cannot be empty'
+///   print(e.message); // 'Message cannot be empty or whitespace only.'
 /// }
 /// ```
 final class ValidationException extends FlutterMindException {

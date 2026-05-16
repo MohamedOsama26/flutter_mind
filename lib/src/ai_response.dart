@@ -58,24 +58,24 @@ class AiResponse {
     return inputTokens! + outputTokens!;
   }
 
-  // ─────────────────────────────────────────────
   // METADATA
-  // ─────────────────────────────────────────────
-
   /// Why the model stopped generating.
   ///
-  /// Common values:
+  /// The exact values are **provider-specific** — each AI provider uses
+  /// different strings. Do not hardcode these values for cross-provider logic.
+  ///
+  /// **Gemini** common values:
   /// - `'STOP'` — natural end of response
   /// - `'MAX_TOKENS'` — hit [maxOutputTokens] limit
   /// - `'SAFETY'` — blocked by safety filters
   ///
+  /// Use the helper getters [wasTruncated] and [wasBlocked] for safe,
+  /// provider-aware checks instead of comparing this string directly.
+  ///
   /// `null` if the provider did not return this information.
   final String? finishReason;
 
-  // ─────────────────────────────────────────────
   // HELPERS
-  // ─────────────────────────────────────────────
-
   /// Whether the response was cut off by the token limit.
   ///
   /// If `true`, consider increasing [GeminiConfig.maxOutputTokens].

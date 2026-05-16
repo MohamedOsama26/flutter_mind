@@ -10,7 +10,7 @@ part 'validation_exception.dart';
 ///
 /// ```dart
 /// try {
-///   await FlutterMind.instance.send('hello');
+///   await FlutterMind.send(userMessage: 'hello');
 /// } on FlutterMindException catch (e) {
 ///   print(e.message);
 /// }

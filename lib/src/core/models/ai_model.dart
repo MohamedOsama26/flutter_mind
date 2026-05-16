@@ -14,7 +14,7 @@ part 'local.dart';
 ///
 /// Use known model constants for compile-time safety and autocomplete:
 /// ```dart
-/// GeminiModel.flash
+/// GeminiModel.flash25
 /// OpenAiModel.gpt4oMini
 /// ClaudeModel.sonnet
 /// ```
