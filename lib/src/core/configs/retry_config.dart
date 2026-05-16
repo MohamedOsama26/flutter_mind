@@ -34,11 +34,7 @@ class RetryConfig {
     this.maxAttempts = 2,
     this.delay = const Duration(seconds: 1),
     this.retryOn = const {429, 500, 503},
-  })  : assert(maxAttempts >= 1, 'FlutterMind: maxAttempts must be at least 1'),
-        assert(
-          retryOn.length > 0,
-          'FlutterMind: retryOn cannot be empty — use RetryConfig.none to disable retry',
-        );
+  }) : assert(maxAttempts >= 1, 'FlutterMind: maxAttempts must be at least 1');
 
   /// Disables retry completely — any failure throws immediately.
   ///
@@ -50,20 +46,16 @@ class RetryConfig {
   ///   retry: RetryConfig.none,
   /// );
   /// ```
-  static final none = RetryConfig(
-    maxAttempts: 1,
-    retryOn: {0}, // unreachable — maxAttempts 1 never retries
-  );
+  static const none = RetryConfig(maxAttempts: 1);
 
   /// Aggressive retry — for apps where availability is critical.
   ///
   /// Retries up to 5 times with a 2 second delay.
-  static final aggressive = RetryConfig(
+  static const aggressive = RetryConfig(
     maxAttempts: 5,
     delay: Duration(seconds: 2),
     retryOn: {429, 500, 502, 503, 504},
   );
-
 
   /// Maximum number of attempts including the first request.
   ///
@@ -95,7 +87,6 @@ class RetryConfig {
   ///
   /// Default: `{429, 500, 503}`
   final Set<int> retryOn;
-
 
   /// Whether retry is effectively disabled.
   bool get isDisabled => maxAttempts <= 1;
