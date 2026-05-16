@@ -29,3 +29,20 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+
+# Metadata and trash
+.metadata
+lib/src/trash/
+
+# Example app — only lib/ and pubspec.yaml are tracked
+example/android/
+example/ios/
+example/linux/
+example/macos/
+example/web/
+example/windows/
+example/build/
+example/.dart_tool/
+example/.idea/
+example/test/
+example/pubspec.lock
