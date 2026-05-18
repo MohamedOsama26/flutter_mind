@@ -12,6 +12,14 @@ export 'src/core/models/chat_message.dart';
 export 'src/core/models/thinking_budget.dart';
 export 'src/core/exceptions/flutter_mind_exception.dart';
 export 'src/core/validators/input_validator.dart';
+export 'src/core/parser/prompt_config.dart';
+export 'src/core/parser/prompt_example.dart';
+export 'src/core/parser/response_format.dart';
+export 'src/core/parser/response_language.dart';
+export 'src/core/parser/response_tone.dart';
+export 'src/core/parser/stop_signal_mode.dart';
+export 'src/core/parser/ai_preset.dart';
+export 'src/core/parser/message_analyzer.dart';
 
 import 'package:flutter_mind/src/core/configs/ai_config.dart';
 import 'package:flutter_mind/src/core/engines/ai_engine.dart';
@@ -37,7 +45,7 @@ import 'package:flutter_mind/src/core/validators/input_validator.dart';
 ///       apiKey: 'AIza...',
 ///       config: GeminiConfig(
 ///         model: GeminiModel.flash25,
-///         systemPrompt: 'You are a helpful assistant.',
+///         systemPrompt: Prompt(role: 'helpful assistant'),
 ///       ),
 ///     ),
 ///   );
