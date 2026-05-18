@@ -272,7 +272,7 @@ class FlutterMindClient {
 
     // Step 2 — beforeSend hook
     if (_beforeSend != null) {
-      return await _beforeSend!(userMessage);
+      return await _beforeSend(userMessage);
     }
 
     return userMessage;
