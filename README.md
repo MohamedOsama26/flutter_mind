@@ -160,12 +160,100 @@ FlutterMind.init(
     apiKey: 'YOUR_KEY',
     config: GeminiConfig(
       model: GeminiModel.flash25,
-      systemPrompt: 'You are a game suggestion assistant. Keep responses short.',
+      systemPrompt: Prompt(role: 'game suggestion assistant'),
       temperature: 0.8,
       maxOutputTokens: 500,
     ),
   ),
 );
+```
+
+---
+
+### Prompt engineering
+
+Control how the model behaves with the `Prompt` class — from one field to full expert config.
+
+**Tier 1 — Minimal**
+
+```dart
+GeminiConfig(
+  systemPrompt: Prompt(role: 'game suggestion assistant'),
+)
+```
+
+**Tier 2 — Standard**
+
+```dart
+Prompt(
+  role: 'game assistant',
+  format: ResponseFormat.numberedList,
+  maxItems: 3,
+  language: ResponseLanguage.auto, // detects Arabic vs English per message
+  constraints: ['mobile only', 'no violent games'],
+)
+```
+
+**Tier 3 — Advanced**
+
+```dart
+Prompt(
+  role: 'mobile game expert for Egyptian users',
+  goal: 'suggest games that match the user mood and age',
+  constraints: ['mobile only', 'no violent games', 'available in Egypt'],
+  format: ResponseFormat.numberedList,
+  maxItems: 3,
+  language: ResponseLanguage.auto,
+  tone: ResponseTone.friendly,
+  audience: 'Egyptian teenagers',
+  examples: [
+    PromptExample(input: 'fun game', output: 'Hollow Knight — platformer'),
+    PromptExample(input: 'relaxing', output: 'Stardew Valley — farming sim'),
+  ],
+)
+```
+
+**Tier 4 — Expert**
+
+```dart
+Prompt(
+  role: 'game assistant',
+  chainOfThought: true,
+  chainSteps: ['identify user mood', 'match game genre', 'select 3 games'],
+  preventInjection: true,        // resists jailbreak attempts
+  responseAnchor: 'Here are your top 3 games:',
+  negativePatterns: ['never suggest PC games'],
+  compressed: false,             // verbose output for complex reasoning
+)
+```
+
+**Ready-made presets**
+
+```dart
+// Use directly
+GeminiConfig(systemPrompt: AiPreset.chat)
+GeminiConfig(systemPrompt: AiPreset.summarizer)
+GeminiConfig(systemPrompt: AiPreset.codeHelper)
+GeminiConfig(systemPrompt: AiPreset.stepByStep)
+
+// Customize one field
+GeminiConfig(
+  systemPrompt: AiPreset.chat.copyWith(role: 'Egyptian culture guide'),
+)
+```
+
+**Stop sequences — pair with the prompt**
+
+```dart
+final prompt = Prompt(
+  format: ResponseFormat.numberedList,
+  maxItems: 3,
+);
+
+GeminiConfig(
+  systemPrompt: prompt,
+  stopSequences: prompt.stopSequences, // → ['[END]'] — model stops exactly here
+)
 ```
 
 ---
@@ -334,7 +422,7 @@ final chatClient = FlutterMindClient(
     apiKey: 'YOUR_KEY',
     config: GeminiConfig(
       model: GeminiModel.flash25,
-      systemPrompt: 'You are a friendly chat assistant.',
+      systemPrompt: Prompt(role: 'friendly chat assistant'),
     ),
   ),
 );
@@ -344,7 +432,7 @@ final summaryClient = FlutterMindClient(
     apiKey: 'YOUR_KEY',
     config: GeminiConfig(
       model: GeminiModel.pro25,
-      systemPrompt: 'You summarize documents concisely.',
+      systemPrompt: Prompt(role: 'document summarizer', tone: ResponseTone.concise),
       temperature: 0.1,
     ),
   ),
@@ -440,12 +528,12 @@ Use [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) for local `.env` f
 - [x] Retry configuration
 - [x] Input validation
 - [x] beforeSend hook
+- [x] Prompt engineering system (Prompt, AiPreset, few-shot examples, chain of thought)
 
 ### v2 — Coming Soon
 - [ ] OpenAI engine
 - [ ] Anthropic Claude engine
 - [ ] Ollama engine (local models — no API key, no cost)
-- [ ] Prompt presets (`AiPreset.gameSuggestion`, etc.)
 - [ ] Response parser (JSON → typed Dart objects)
 - [ ] flutter_mind_vision (image generation)
 - [ ] flutter_mind_audio (TTS, STT)
