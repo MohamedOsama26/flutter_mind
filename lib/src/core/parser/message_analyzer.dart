@@ -3,7 +3,7 @@ import 'package:flutter_mind/src/core/parser/response_tone.dart';
 
 /// Analyzes user messages to infer metadata before they are sent to the AI.
 ///
-/// Used by [PromptBuilder] to resolve [ResponseLanguage.auto] and
+/// Used by [Prompt] to resolve [ResponseLanguage.auto] and
 /// [ResponseTone] smart defaults — it reads the message and picks the right
 /// values so developers don't have to.
 ///
@@ -81,7 +81,7 @@ class MessageAnalyzer {
   /// | 30 – 149 chars | [ResponseTone.friendly] — conversational |
   /// | 150+ chars | [ResponseTone.formal] — detailed request |
   ///
-  /// This is a rough heuristic. Override it via [PromptConfig.tone] when
+  /// This is a rough heuristic. Override it via [Prompt.tone] when
   /// you need a specific tone regardless of message length.
   ///
   /// ```dart

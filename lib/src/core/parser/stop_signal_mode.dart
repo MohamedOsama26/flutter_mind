@@ -4,7 +4,7 @@
 /// its output. The API stops generating the moment it sees that word —
 /// saving tokens and preventing the model from rambling after it is done.
 ///
-/// Set this via [Prompt.stopSignalMode] or [PromptBuilder.stopSignal]:
+/// Set this via [Prompt.stopSignalMode]:
 ///
 /// ```dart
 /// // Recommended — let the package decide automatically
@@ -24,17 +24,18 @@
 /// Prompt(stopSignalMode: StopSignalMode.none)
 /// ```
 ///
-/// Pass [PromptBuilder.buildStopSequences] to [GeminiConfig.stopSequences]
+/// Pass [Prompt.stopSequences] to [GeminiConfig.stopSequences]
 /// so the API actually halts at the signal:
 ///
 /// ```dart
-/// final builder = PromptBuilder()
-///   .format(ResponseFormat.numberedList)
-///   .maxItems(3);
+/// final prompt = Prompt(
+///   format: ResponseFormat.numberedList,
+///   maxItems: 3,
+/// );
 ///
 /// GeminiConfig(
-///   systemPrompt: builder.build(),
-///   stopSequences: builder.buildStopSequences(),
+///   systemPrompt: prompt,
+///   stopSequences: prompt.stopSequences,
 /// )
 /// ```
 enum StopSignalMode {

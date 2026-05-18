@@ -7,7 +7,7 @@ import 'package:flutter_mind/src/core/parser/stop_signal_mode.dart';
 
 /// Defines how the AI should behave and format its responses.
 ///
-/// Pass a [Prompt] to [GeminiConfig.systemPrompt]. Call [build] to get the
+/// Pass a [Prompt] to [AiConfig.systemPrompt]. Call [build] to get the
 /// final string — or let the engine call it automatically per request.
 ///
 /// ## Minimal — one line

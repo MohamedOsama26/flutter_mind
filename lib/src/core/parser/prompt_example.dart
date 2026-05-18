@@ -29,7 +29,7 @@
 /// ## Usage
 ///
 /// ```dart
-/// PromptConfig(
+/// Prompt(
 ///   examples: [
 ///     PromptExample(
 ///       input: 'fun game for kids',
