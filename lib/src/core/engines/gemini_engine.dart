@@ -232,7 +232,7 @@ class GeminiEngine implements AiEngine {
       return response.data['totalTokens'] as int? ?? 0;
     } catch (_) {
       // Fallback — rough estimate: 1 token ≈ 4 characters
-      final systemLength = resolved.systemPrompt?.length ?? 0;
+      final systemLength = resolved.systemPrompt?.build(userMessage: userMessage).length ?? 0;
       return ((userMessage.length + systemLength) / 4).ceil();
     }
   }
@@ -471,10 +471,10 @@ class GeminiEngine implements AiEngine {
     final body = <String, dynamic>{'contents': contents};
 
     // System instruction
-    if (config.systemPrompt != null && config.systemPrompt!.isNotEmpty) {
+    if (config.systemPrompt != null) {
       body['systemInstruction'] = {
         'parts': [
-          {'text': config.systemPrompt}
+          {'text': config.systemPrompt!.build(userMessage: userMessage)}
         ],
       };
     }

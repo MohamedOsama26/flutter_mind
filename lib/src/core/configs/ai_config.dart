@@ -1,6 +1,8 @@
 import 'package:flutter_mind/src/core/models/ai_model.dart';
 import 'package:flutter_mind/src/core/models/capability.dart';
 import 'package:flutter_mind/src/core/models/thinking_budget.dart';
+import 'package:flutter_mind/src/core/parser/prompt_builder.dart';
+import 'package:flutter_mind/src/core/parser/prompt_config.dart';
 
 part 'gemini_config.dart';
 part 'open_ai_config.dart';
@@ -50,7 +52,7 @@ sealed class AiConfig {
   /// Not visible to the end user.
   ///
   /// Example: `'You are a game suggestion assistant for Egyptian Arabic speakers.'`
-  final String? systemPrompt;
+  final Prompt? systemPrompt;
 
   /// Controls randomness of the output.
   ///

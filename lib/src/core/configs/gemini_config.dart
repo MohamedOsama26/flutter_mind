@@ -255,7 +255,7 @@ final class GeminiConfig extends AiConfig {
   /// ```
   GeminiConfig copyWith({
     AiModel? model,
-    String? systemPrompt,
+    Prompt? systemPrompt,
     double? temperature,
     int? maxOutputTokens,
     List<String>? stopSequences,

@@ -1,3 +1,4 @@
+import 'package:flutter_mind/src/core/parser/prompt_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_mind/flutter_mind.dart';
 
@@ -395,5 +396,7 @@ void main() {
       // 'عامل إيه النهارده؟' = 19 chars → ceil(19/4) = 5
       expect(FlutterMind.estimateTokens('عامل إيه النهارده؟'), 5);
     });
+
+    GeminiConfig(model: GeminiModel.flash25,systemPrompt: Prompt());
   });
 }
