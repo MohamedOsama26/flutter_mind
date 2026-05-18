@@ -50,4 +50,13 @@ enum ResponseTone {
         ResponseTone.concise   => 'Be concise and direct. Avoid unnecessary words.',
         ResponseTone.detailed  => 'Be thorough and detailed. Include context and examples where helpful.',
       };
+
+  /// Short token-compressed label used in the telegraphic system prompt.
+  String get compressed => switch (this) {
+        ResponseTone.formal    => 'formal',
+        ResponseTone.casual    => 'casual',
+        ResponseTone.friendly  => 'friendly',
+        ResponseTone.concise   => 'concise',
+        ResponseTone.detailed  => 'detailed',
+      };
 }

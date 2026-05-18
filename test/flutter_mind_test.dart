@@ -1,4 +1,3 @@
-import 'package:flutter_mind/src/core/parser/prompt_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_mind/flutter_mind.dart';
 
@@ -397,6 +396,5 @@ void main() {
       expect(FlutterMind.estimateTokens('عامل إيه النهارده؟'), 5);
     });
 
-    GeminiConfig(model: GeminiModel.flash25,systemPrompt: Prompt());
   });
 }

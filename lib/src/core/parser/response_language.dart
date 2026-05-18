@@ -47,4 +47,14 @@ enum ResponseLanguage {
         ResponseLanguage.bilingual => 'Respond in both English and Arabic.',
         ResponseLanguage.auto      => '',
       };
+
+  /// Short token-compressed label used in the telegraphic system prompt.
+  ///
+  /// Returns an empty string for [auto] — resolved at build time.
+  String get compressed => switch (this) {
+        ResponseLanguage.english   => 'en',
+        ResponseLanguage.arabic    => 'ar',
+        ResponseLanguage.bilingual => 'en+ar',
+        ResponseLanguage.auto      => '',
+      };
 }

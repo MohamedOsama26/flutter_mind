@@ -1,7 +1,6 @@
 import 'package:flutter_mind/src/core/models/ai_model.dart';
 import 'package:flutter_mind/src/core/models/capability.dart';
 import 'package:flutter_mind/src/core/models/thinking_budget.dart';
-import 'package:flutter_mind/src/core/parser/prompt_builder.dart';
 import 'package:flutter_mind/src/core/parser/prompt_config.dart';
 
 part 'gemini_config.dart';

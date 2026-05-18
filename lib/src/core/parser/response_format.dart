@@ -86,4 +86,17 @@ enum ResponseFormat {
         ResponseFormat.steps        => true,
         _                           => false,
       };
+
+  /// Short token-compressed label used in the telegraphic system prompt.
+  String get compressed => switch (this) {
+        ResponseFormat.paragraph    => 'paragraph',
+        ResponseFormat.numberedList => 'numbered-list',
+        ResponseFormat.bulletedList => 'bullet-list',
+        ResponseFormat.table        => 'table',
+        ResponseFormat.json         => 'json',
+        ResponseFormat.steps        => 'steps',
+        ResponseFormat.oneWord      => 'word',
+        ResponseFormat.code         => 'code',
+        ResponseFormat.oneSentence  => 'sentence',
+      };
 }
