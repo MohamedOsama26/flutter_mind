@@ -8,14 +8,14 @@
 ///
 /// ## How to use
 ///
-/// Pass a [ThinkingBudget] to [GeminiConfig.thinkingBudget]:
+/// Pass a [ThinkingBudget] to [GeminiConfig.thinkingLevel]:
 ///
 /// ```dart
 /// final gemini = GeminiEngine(
 ///   apiKey: 'AIza...',
 ///   config: GeminiConfig(
 ///     model: GeminiModel.flash25,
-///     thinkingBudget: ThinkingLevel.moderate,
+///     thinkingLevel: ThinkingLevel.moderate,
 ///   ),
 /// );
 /// ```
@@ -63,13 +63,13 @@ sealed class ThinkingBudget {
 ///
 /// ```dart
 /// // Disable thinking for a fast, cheap response
-/// thinkingBudget: ThinkingLevel.none
+/// thinkingLevel: ThinkingLevel.none
 ///
 /// // Light thinking for basic analysis
-/// thinkingBudget: ThinkingLevel.light
+/// thinkingLevel: ThinkingLevel.light
 ///
 /// // Deep thinking for complex code or hard math
-/// thinkingBudget: ThinkingLevel.deep
+/// thinkingLevel: ThinkingLevel.deep
 /// ```
 final class ThinkingLevel extends ThinkingBudget {
   const ThinkingLevel._({ required super.tokens});
@@ -132,7 +132,7 @@ final class ThinkingLevel extends ThinkingBudget {
 ///
 /// ```dart
 /// // Exactly 1000 tokens of thinking
-/// thinkingBudget: CustomThinkingBudget(tokens: 1000)
+/// thinkingLevel: CustomThinkingBudget(tokens: 1000)
 /// ```
 ///
 /// [tokens] must be `>= 0`. Pass `0` to disable thinking, though

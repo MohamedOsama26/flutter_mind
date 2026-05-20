@@ -30,7 +30,7 @@ import 'package:flutter_mind/src/ai_response.dart';
 ///   final AiConfig _defaultConfig;
 ///
 ///   @override
-///   AiModel get model => _defaultConfig.model;
+///   AiModel get model => _defaultConfig.model!;
 ///
 ///   @override
 ///   Future<AiResponse> send({required String userMessage, AiConfig? config}) async {

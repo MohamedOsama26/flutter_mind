@@ -57,16 +57,27 @@ part of 'ai_config.dart';
 final class GeminiConfig extends AiConfig {
   /// Creates a Gemini generation configuration.
   ///
-  /// All parameters are optional — any unset field falls back to the engine's
-  /// [GeminiEngine._defaultConfig], which itself falls back to smart defaults.
+  /// All parameters are optional. Unset fields fall back to the engine's
+  /// default config, which itself falls back to smart defaults.
   ///
-  /// The only exception is [model] — it is required to ensure you always know
-  /// which Gemini model is being used.
+  /// [model] is required when setting up the engine. In per-call overrides,
+  /// omit it to inherit the engine's default model:
   ///
-  /// Throws [AssertionError] in debug mode if [model] is not a
-  /// [GeminiModel] or [CustomModel].
+  /// ```dart
+  /// // Engine init — model required
+  /// GeminiEngine(config: GeminiConfig(model: GeminiModel.flash25))
+  ///
+  /// // Per-call override — only change what you need
+  /// FlutterMind.send(
+  ///   userMessage: message,
+  ///   config: GeminiConfig(systemPrompt: Prompt(role: 'game assistant')),
+  /// )
+  /// ```
+  ///
+  /// Throws [AssertionError] in debug mode if [model] is set to a type that
+  /// is not [GeminiModel] or [CustomModel].
   const GeminiConfig({
-    required super.model,
+    super.model,
     super.systemPrompt,
     super.temperature,
     super.maxOutputTokens,
@@ -81,7 +92,7 @@ final class GeminiConfig extends AiConfig {
     this.presencePenalty,
     this.frequencyPenalty,
   }) : assert(
-          model is GeminiModel || model is CustomModel,
+          model == null || model is GeminiModel || model is CustomModel,
           'GeminiConfig.model must be a GeminiModel or CustomModel',
         );
 
@@ -255,7 +266,7 @@ final class GeminiConfig extends AiConfig {
   /// ```
   GeminiConfig copyWith({
     AiModel? model,
-    String? systemPrompt,
+    Prompt? systemPrompt,
     double? temperature,
     int? maxOutputTokens,
     List<String>? stopSequences,

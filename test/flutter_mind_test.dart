@@ -305,6 +305,49 @@ void main() {
       expect(copy.model, base.model);
       expect(copy.temperature, base.temperature);
     });
+
+    test('per-call override with no model preserves the engine init model', () {
+      // Simulates: GeminiEngine init with pro25, then send with config that
+      // only changes systemPrompt — model must stay pro25, not reset to flash25.
+      const engineDefault = GeminiConfig(
+        model: GeminiModel.pro25,
+        temperature: 0.7,
+      );
+      const perCallOverride = GeminiConfig(
+        // no model set — should inherit pro25 from engine default
+        systemPrompt: Prompt(role: 'new role for this call'),
+      );
+
+      final merged = engineDefault.copyWith(
+        model: perCallOverride.model,           // null — should NOT override
+        systemPrompt: perCallOverride.systemPrompt,
+      );
+
+      expect(merged.model, GeminiModel.pro25,
+          reason: 'model must stay as the engine init model when '
+              'per-call config has no model set');
+      expect(merged.systemPrompt?.role, 'new role for this call');
+      expect(merged.temperature, 0.7);
+    });
+
+    test('per-call override with explicit model does change the model', () {
+      const engineDefault = GeminiConfig(
+        model: GeminiModel.flash25,
+        temperature: 0.7,
+      );
+      const perCallOverride = GeminiConfig(
+        model: GeminiModel.pro25,
+        systemPrompt: Prompt(role: 'complex task'),
+      );
+
+      final merged = engineDefault.copyWith(
+        model: perCallOverride.model,
+        systemPrompt: perCallOverride.systemPrompt,
+      );
+
+      expect(merged.model, GeminiModel.pro25,
+          reason: 'model must change when explicitly set in per-call config');
+    });
   });
 
   // THINKING BUDGET
@@ -395,5 +438,278 @@ void main() {
       // 'عامل إيه النهارده؟' = 19 chars → ceil(19/4) = 5
       expect(FlutterMind.estimateTokens('عامل إيه النهارده؟'), 5);
     });
+
+  });
+
+  // PROMPT
+  group('Prompt.build()', () {
+
+    group('compressed output (default)', () {
+      test('emits key:value role line', () {
+        final result = Prompt(role: 'game assistant').build();
+        expect(result, contains('role: game assistant'));
+      });
+
+      test('falls back to "assistant" when role is null', () {
+        final result = Prompt().build();
+        expect(result, contains('role: assistant'));
+      });
+
+      test('emits compressed tone label', () {
+        final result = Prompt(tone: ResponseTone.friendly).build();
+        expect(result, contains('tone: friendly'));
+      });
+
+      test('emits compressed format label', () {
+        final result = Prompt(format: ResponseFormat.numberedList).build();
+        expect(result, contains('format: numbered-list'));
+      });
+
+      test('emits count line for list format with maxItems', () {
+        final result = Prompt(
+          format: ResponseFormat.numberedList,
+          maxItems: 3,
+        ).build();
+        expect(result, contains('count: 3'));
+      });
+
+      test('does not emit count line for non-list format', () {
+        final result = Prompt(
+          format: ResponseFormat.paragraph,
+          maxItems: 3,
+        ).build();
+        expect(result, isNot(contains('count:')));
+      });
+
+      test('includes user constraints in rules line', () {
+        final result = Prompt(
+          constraints: ['mobile only', 'no violence'],
+        ).build();
+        expect(result, contains('rules: mobile only | no violence'));
+      });
+
+      test('always appends no-greetings and no-disclaimers to rules', () {
+        final result = Prompt().build();
+        expect(result, contains('no greetings'));
+        expect(result, contains('no disclaimers'));
+      });
+
+      test('includes no: line with common filler phrases', () {
+        final result = Prompt().build();
+        expect(result, contains('no: '));
+        expect(result, contains('Sure!'));
+        expect(result, contains('As an AI'));
+      });
+
+      test('includes negativePatterns in no: line', () {
+        final result = Prompt(
+          negativePatterns: ['never suggest PC games'],
+        ).build();
+        expect(result, contains('never suggest PC games'));
+      });
+
+      test('includes optional fields when set', () {
+        final result = Prompt(
+          goal: 'suggest fun games',
+          audience: 'teenagers',
+          context: 'Egyptian market',
+        ).build();
+        expect(result, contains('goal: suggest fun games'));
+        expect(result, contains('audience: teenagers'));
+        expect(result, contains('context: Egyptian market'));
+      });
+
+      test('includes examples in Q/A format', () {
+        final result = Prompt(
+          examples: [
+            PromptExample(input: 'fun game', output: 'Hollow Knight'),
+          ],
+        ).build();
+        expect(result, contains('Q: fun game → A: Hollow Knight'));
+      });
+    });
+
+    group('verbose output (compressed: false)', () {
+      test('emits natural-language role sentence', () {
+        final result = Prompt(
+          role: 'game assistant',
+          compressed: false,
+        ).build();
+        expect(result, contains('You are a game assistant.'));
+      });
+
+      test('emits tone instruction sentence', () {
+        final result = Prompt(
+          tone: ResponseTone.formal,
+          compressed: false,
+        ).build();
+        expect(result, contains('Use formal, professional language.'));
+      });
+
+      test('emits format instruction sentence', () {
+        final result = Prompt(
+          format: ResponseFormat.bulletedList,
+          compressed: false,
+        ).build();
+        expect(result, contains('Respond as a bulleted list'));
+      });
+
+      test('emits maxItems sentence for list format', () {
+        final result = Prompt(
+          format: ResponseFormat.steps,
+          maxItems: 5,
+          compressed: false,
+        ).build();
+        expect(result, contains('Return exactly 5 items.'));
+      });
+    });
+
+    group('language auto-detection', () {
+      test('resolves to ar for Arabic message', () {
+        final result = Prompt(language: ResponseLanguage.auto)
+            .build(userMessage: 'مرحبا كيف حالك اليوم');
+        expect(result, contains('lang: ar'));
+      });
+
+      test('resolves to en for English message', () {
+        final result = Prompt(language: ResponseLanguage.auto)
+            .build(userMessage: 'Hello, how are you today?');
+        expect(result, contains('lang: en'));
+      });
+
+      test('resolves to en+ar for mixed message', () {
+        final result = Prompt(language: ResponseLanguage.auto)
+            .build(userMessage: 'My name is محمد and I love games');
+        expect(result, contains('lang: en+ar'));
+      });
+
+      test('no lang line when auto and no userMessage', () {
+        final result = Prompt(language: ResponseLanguage.auto).build();
+        expect(result, isNot(contains('lang:')));
+      });
+
+      test('fixed language always included without userMessage', () {
+        final result = Prompt(language: ResponseLanguage.arabic).build();
+        expect(result, contains('lang: ar'));
+      });
+    });
+
+    group('chain of thought', () {
+      test('generic directive when no steps provided', () {
+        final result = Prompt(chainOfThought: true).build();
+        expect(result, contains('Think step by step.'));
+      });
+
+      test('numbered steps when chainSteps provided', () {
+        final result = Prompt(
+          chainOfThought: true,
+          chainSteps: ['identify mood', 'match genre', 'select games'],
+        ).build();
+        expect(result, contains('1. identify mood'));
+        expect(result, contains('2. match genre'));
+        expect(result, contains('3. select games'));
+      });
+
+      test('chain of thought appears before role', () {
+        final result = Prompt(
+          chainOfThought: true,
+          role: 'game assistant',
+        ).build();
+        expect(
+          result.indexOf('Think step by step'),
+          lessThan(result.indexOf('role:')),
+        );
+      });
+
+      test('no chain directive when chainOfThought is false', () {
+        final result = Prompt(chainOfThought: false).build();
+        expect(result, isNot(contains('Think step by step')));
+      });
+    });
+
+    group('injection prevention', () {
+      test('adds immutable header when preventInjection is true', () {
+        final result = Prompt(preventInjection: true).build();
+        expect(result, contains('IMMUTABLE SYSTEM INSTRUCTIONS'));
+      });
+
+      test('header appears before role line', () {
+        final result = Prompt(
+          preventInjection: true,
+          role: 'game assistant',
+        ).build();
+        expect(
+          result.indexOf('IMMUTABLE'),
+          lessThan(result.indexOf('role:')),
+        );
+      });
+
+      test('no header when preventInjection is false', () {
+        final result = Prompt(preventInjection: false).build();
+        expect(result, isNot(contains('IMMUTABLE')));
+      });
+    });
+
+    group('stopSequences getter', () {
+      test('returns [END] for list format with maxItems', () {
+        final prompt = Prompt(
+          format: ResponseFormat.numberedList,
+          maxItems: 3,
+        );
+        expect(prompt.stopSequences, equals(['[END]']));
+      });
+
+      test('build() includes end: [END] for list with maxItems', () {
+        final result = Prompt(
+          format: ResponseFormat.numberedList,
+          maxItems: 3,
+        ).build();
+        expect(result, contains('end: [END]'));
+      });
+
+      test('returns null for paragraph format', () {
+        final prompt = Prompt(format: ResponseFormat.paragraph);
+        expect(prompt.stopSequences, isNull);
+      });
+
+      test('returns null for list format without maxItems', () {
+        final prompt = Prompt(format: ResponseFormat.numberedList);
+        expect(prompt.stopSequences, isNull);
+      });
+
+      test('returns custom signal for manual mode', () {
+        final prompt = Prompt(
+          stopSignalMode: StopSignalMode.manual,
+          customStopSignal: '[DONE]',
+        );
+        expect(prompt.stopSequences, equals(['[DONE]']));
+      });
+
+      test('returns null for StopSignalMode.none even with list + maxItems', () {
+        final prompt = Prompt(
+          format: ResponseFormat.numberedList,
+          maxItems: 3,
+          stopSignalMode: StopSignalMode.none,
+        );
+        expect(prompt.stopSequences, isNull);
+      });
+    });
+
+    group('copyWith', () {
+      test('changes only the specified field', () {
+        const original = Prompt(role: 'game assistant', maxItems: 3);
+        final copy = original.copyWith(role: 'cooking assistant');
+        expect(copy.role, 'cooking assistant');
+        expect(copy.maxItems, 3);
+      });
+
+      test('AiPreset.chat copyWith preserves other fields', () {
+        final custom = AiPreset.chat.copyWith(role: 'Egyptian culture guide');
+        expect(custom.role, 'Egyptian culture guide');
+        expect(custom.tone, AiPreset.chat.tone);
+        expect(custom.language, AiPreset.chat.language);
+      });
+    });
+
   });
 }

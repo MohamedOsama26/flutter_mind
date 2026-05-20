@@ -28,7 +28,7 @@ class AiRequest {
   final int maxHistoryMessages;
 
   @override
-  String toString() => 'AiRequest(model: ${config.model.value}, '
+  String toString() => 'AiRequest(model: ${config.model?.value}, '
       'messageLength: ${userMessage.length}, '
       'historyLength: ${history?.length ?? 0})';
 }

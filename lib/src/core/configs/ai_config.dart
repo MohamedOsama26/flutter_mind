@@ -1,6 +1,7 @@
 import 'package:flutter_mind/src/core/models/ai_model.dart';
 import 'package:flutter_mind/src/core/models/capability.dart';
 import 'package:flutter_mind/src/core/models/thinking_budget.dart';
+import 'package:flutter_mind/src/core/parser/prompt_config.dart';
 
 part 'gemini_config.dart';
 part 'open_ai_config.dart';
@@ -30,7 +31,7 @@ part 'local_config.dart';
 /// ```
 sealed class AiConfig {
   const AiConfig({
-    required this.model,
+    this.model,
     this.systemPrompt,
     this.temperature,
     this.maxOutputTokens,
@@ -42,15 +43,17 @@ sealed class AiConfig {
   ///
   /// Must match the engine type — e.g. [GeminiModel] for [GeminiEngine].
   /// Use [CustomModel] for any model not listed as a known constant.
-  final AiModel model;
+  ///
+  /// `null` in a per-call override means "inherit the engine's default model."
+  final AiModel? model;
 
   /// System-level instructions that shape the model's behavior and persona.
   ///
   /// Set once per engine — defines how the model responds to all messages.
   /// Not visible to the end user.
   ///
-  /// Example: `'You are a game suggestion assistant for Egyptian Arabic speakers.'`
-  final String? systemPrompt;
+  /// Example: `Prompt(role: 'game suggestion assistant for Egyptian Arabic speakers')`
+  final Prompt? systemPrompt;
 
   /// Controls randomness of the output.
   ///

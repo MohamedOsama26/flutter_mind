@@ -22,7 +22,7 @@ import 'package:flutter_mind/src/ai_response.dart';
 ///   apiKey: 'AIza...',
 ///   config: GeminiConfig(
 ///     model: GeminiModel.pro25,
-///     systemPrompt: 'You are a helpful assistant.',
+///     systemPrompt: Prompt(role: 'helpful assistant'),
 ///     temperature: 0.7,
 ///   ),
 ///   timeout: Duration(seconds: 60),
@@ -109,7 +109,7 @@ class GeminiEngine implements AiEngine {
   /// if no config was provided. Individual calls can override this via their
   /// own `config` parameter.
   @override
-  AiModel get model => _defaultConfig.model;
+  AiModel get model => _defaultConfig.model!;
 
   /// Sends a message and returns the complete [AiResponse].
   ///
@@ -226,13 +226,13 @@ class GeminiEngine implements AiEngine {
         config: resolved,
       );
       final response = await _dio.post(
-        '${resolved.model.value}:countTokens',
+        '${resolved.model!.value}:countTokens',
         data: body,
       );
       return response.data['totalTokens'] as int? ?? 0;
     } catch (_) {
       // Fallback — rough estimate: 1 token ≈ 4 characters
-      final systemLength = resolved.systemPrompt?.length ?? 0;
+      final systemLength = resolved.systemPrompt?.build(userMessage: userMessage).length ?? 0;
       return ((userMessage.length + systemLength) / 4).ceil();
     }
   }
@@ -245,7 +245,7 @@ class GeminiEngine implements AiEngine {
   Future<bool> isAvailable() async {
     try {
       await _dio.get(
-        _defaultConfig.model.value,
+        _defaultConfig.model!.value,
         options: Options(
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
@@ -330,8 +330,8 @@ class GeminiEngine implements AiEngine {
     final hasStructuredOutput = config.responseMimeType != null;
 
     return GeminiConfig(
-      // Model — if not set, pick based on config
-      model: model,
+      // Model — fall back to flash25 if not explicitly set
+      model: model ?? GeminiModel.flash25,
 
       // System prompt — keep as is
       systemPrompt: config.systemPrompt,
@@ -384,7 +384,7 @@ class GeminiEngine implements AiEngine {
 
     try {
       final response = await _dio.post(
-        '${config.model.value}:generateContent',
+        '${config.model!.value}:generateContent',
         data: _buildRequestBody(
           userMessage: request.userMessage,
           config: config,
@@ -392,7 +392,7 @@ class GeminiEngine implements AiEngine {
           maxHistoryMessages: request.maxHistoryMessages,
         ),
       );
-      return _parseResponse(response.data, config.model);
+      return _parseResponse(response.data, config.model!);
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -404,7 +404,7 @@ class GeminiEngine implements AiEngine {
 
     try {
       final response = await _dio.post<ResponseBody>(
-        '${config.model.value}:streamGenerateContent',
+        '${config.model!.value}:streamGenerateContent',
         data: _buildRequestBody(
           userMessage: request.userMessage,
           config: config,
@@ -471,10 +471,10 @@ class GeminiEngine implements AiEngine {
     final body = <String, dynamic>{'contents': contents};
 
     // System instruction
-    if (config.systemPrompt != null && config.systemPrompt!.isNotEmpty) {
+    if (config.systemPrompt != null) {
       body['systemInstruction'] = {
         'parts': [
-          {'text': config.systemPrompt}
+          {'text': config.systemPrompt!.build(userMessage: userMessage)}
         ],
       };
     }
@@ -623,7 +623,7 @@ class GeminiEngine implements AiEngine {
           raw: raw,
         ),
       404 => EngineException(
-          'GeminiEngine: model not found — "${_defaultConfig.model.value}". '
+          'GeminiEngine: model not found — "${_defaultConfig.model!.value}". '
           'Check the model name or use a CustomModel string.',
           statusCode: 404,
           raw: raw,
