@@ -30,8 +30,7 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Metadata and trash
-.metadata
+# Temp/scratch folders
 lib/src/trash/
 
 # Example app — only lib/ and pubspec.yaml are tracked
