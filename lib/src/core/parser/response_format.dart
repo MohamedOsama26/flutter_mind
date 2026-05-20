@@ -1,11 +1,11 @@
 /// The structure the AI should use when formatting its response.
 ///
-/// Pass this to [PromptConfig] to tell the model exactly how to shape
-/// its output. The [PromptBuilder] converts this value into a natural-language
+/// Pass this to [Prompt] to tell the model exactly how to shape
+/// its output. [Prompt.build] converts this value into a natural-language
 /// instruction that is injected into the system prompt automatically.
 ///
 /// ```dart
-/// PromptConfig(
+/// Prompt(
 ///   format: ResponseFormat.numberedList,
 ///   tone: ResponseTone.concise,
 /// )
@@ -79,7 +79,7 @@ enum ResponseFormat {
 
   /// Whether this format produces a list of items.
   ///
-  /// Used to determine if [PromptBuilder.maxItems] applies.
+  /// Used to determine if [Prompt.maxItems] applies.
   bool get isList => switch (this) {
         ResponseFormat.numberedList ||
         ResponseFormat.bulletedList ||

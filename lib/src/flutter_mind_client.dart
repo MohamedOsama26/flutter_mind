@@ -40,9 +40,9 @@ typedef BeforeSendHook = Future<String> Function(String userMessage);
 /// final ai = FlutterMindClient(
 ///   engine: GeminiEngine(
 ///     apiKey: 'AIza...',
-///     defaultConfig: GeminiConfig(
+///     config: GeminiConfig(
 ///       model: GeminiModel.pro25,
-///       systemPrompt: 'You are a game suggestion assistant.',
+///       systemPrompt: Prompt(role: 'game suggestion assistant'),
 ///       temperature: 0.8,
 ///     ),
 ///   ),

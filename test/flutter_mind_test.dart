@@ -305,6 +305,49 @@ void main() {
       expect(copy.model, base.model);
       expect(copy.temperature, base.temperature);
     });
+
+    test('per-call override with no model preserves the engine init model', () {
+      // Simulates: GeminiEngine init with pro25, then send with config that
+      // only changes systemPrompt — model must stay pro25, not reset to flash25.
+      const engineDefault = GeminiConfig(
+        model: GeminiModel.pro25,
+        temperature: 0.7,
+      );
+      const perCallOverride = GeminiConfig(
+        // no model set — should inherit pro25 from engine default
+        systemPrompt: Prompt(role: 'new role for this call'),
+      );
+
+      final merged = engineDefault.copyWith(
+        model: perCallOverride.model,           // null — should NOT override
+        systemPrompt: perCallOverride.systemPrompt,
+      );
+
+      expect(merged.model, GeminiModel.pro25,
+          reason: 'model must stay as the engine init model when '
+              'per-call config has no model set');
+      expect(merged.systemPrompt?.role, 'new role for this call');
+      expect(merged.temperature, 0.7);
+    });
+
+    test('per-call override with explicit model does change the model', () {
+      const engineDefault = GeminiConfig(
+        model: GeminiModel.flash25,
+        temperature: 0.7,
+      );
+      const perCallOverride = GeminiConfig(
+        model: GeminiModel.pro25,
+        systemPrompt: Prompt(role: 'complex task'),
+      );
+
+      final merged = engineDefault.copyWith(
+        model: perCallOverride.model,
+        systemPrompt: perCallOverride.systemPrompt,
+      );
+
+      expect(merged.model, GeminiModel.pro25,
+          reason: 'model must change when explicitly set in per-call config');
+    });
   });
 
   // THINKING BUDGET

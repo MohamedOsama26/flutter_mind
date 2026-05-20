@@ -6,23 +6,28 @@ import 'package:flutter_mind/src/core/parser/response_tone.dart';
 /// Ready-made [Prompt] presets for the most common AI use cases.
 ///
 /// Each preset is a sensible starting point — use it as-is or customize
-/// with [Prompt.copyWith] to fit your app:
+/// with [Prompt.copyWith] to fit your app.
+///
+/// Pass the [Prompt] object directly to [GeminiConfig.systemPrompt] —
+/// the engine calls [Prompt.build] automatically per request:
 ///
 /// ```dart
 /// // Use directly
-/// systemPrompt: AiPreset.chat.build(userMessage: message)
+/// GeminiConfig(systemPrompt: AiPreset.chat)
 ///
 /// // Customize one field
-/// systemPrompt: AiPreset.chat
-///   .copyWith(role: 'Egyptian culture guide')
-///   .build(userMessage: message)
+/// GeminiConfig(
+///   systemPrompt: AiPreset.chat.copyWith(role: 'Egyptian culture guide'),
+/// )
 ///
 /// // Customize several fields
-/// systemPrompt: AiPreset.summarizer.copyWith(
-///   maxItems: 5,
-///   tone: ResponseTone.formal,
-///   audience: 'business executives',
-/// ).build(userMessage: message)
+/// GeminiConfig(
+///   systemPrompt: AiPreset.summarizer.copyWith(
+///     maxItems: 5,
+///     tone: ResponseTone.formal,
+///     audience: 'business executives',
+///   ),
+/// )
 /// ```
 abstract final class AiPreset {
   /// General-purpose conversational assistant.
@@ -31,7 +36,7 @@ abstract final class AiPreset {
   /// Good default for any chat feature.
   ///
   /// ```dart
-  /// systemPrompt: AiPreset.chat.build(userMessage: message)
+  /// GeminiConfig(systemPrompt: AiPreset.chat)
   /// ```
   static const chat = Prompt(
     role: 'helpful and friendly assistant',
@@ -46,12 +51,12 @@ abstract final class AiPreset {
   /// Good for developer tools, code review, or learning apps.
   ///
   /// ```dart
-  /// systemPrompt: AiPreset.codeHelper.build()
+  /// GeminiConfig(systemPrompt: AiPreset.codeHelper)
   ///
   /// // Customize for a specific language
-  /// systemPrompt: AiPreset.codeHelper
-  ///   .copyWith(role: 'Flutter and Dart expert')
-  ///   .build()
+  /// GeminiConfig(
+  ///   systemPrompt: AiPreset.codeHelper.copyWith(role: 'Flutter and Dart expert'),
+  /// )
   /// ```
   static const codeHelper = Prompt(
     role: 'experienced software developer',
@@ -67,12 +72,12 @@ abstract final class AiPreset {
   /// Good for news apps, document readers, or content tools.
   ///
   /// ```dart
-  /// systemPrompt: AiPreset.summarizer.build(userMessage: message)
+  /// GeminiConfig(systemPrompt: AiPreset.summarizer)
   ///
   /// // Limit bullet points
-  /// systemPrompt: AiPreset.summarizer
-  ///   .copyWith(maxItems: 5)
-  ///   .build(userMessage: message)
+  /// GeminiConfig(
+  ///   systemPrompt: AiPreset.summarizer.copyWith(maxItems: 5),
+  /// )
   /// ```
   static const summarizer = Prompt(
     role: 'expert summarizer',
@@ -88,12 +93,12 @@ abstract final class AiPreset {
   /// Good for FAQ sections, help centers, or knowledge bases.
   ///
   /// ```dart
-  /// systemPrompt: AiPreset.qa.build(userMessage: message)
+  /// GeminiConfig(systemPrompt: AiPreset.qa)
   ///
   /// // Add domain context
-  /// systemPrompt: AiPreset.qa
-  ///   .copyWith(context: 'Flutter mobile development')
-  ///   .build(userMessage: message)
+  /// GeminiConfig(
+  ///   systemPrompt: AiPreset.qa.copyWith(context: 'Flutter mobile development'),
+  /// )
   /// ```
   static const qa = Prompt(
     role: 'knowledgeable assistant who answers questions clearly',
@@ -109,12 +114,12 @@ abstract final class AiPreset {
   /// Good for how-to guides, tutorials, recipes, or onboarding flows.
   ///
   /// ```dart
-  /// systemPrompt: AiPreset.stepByStep.build(userMessage: message)
+  /// GeminiConfig(systemPrompt: AiPreset.stepByStep)
   ///
   /// // Limit number of steps
-  /// systemPrompt: AiPreset.stepByStep
-  ///   .copyWith(maxItems: 5)
-  ///   .build(userMessage: message)
+  /// GeminiConfig(
+  ///   systemPrompt: AiPreset.stepByStep.copyWith(maxItems: 5),
+  /// )
   /// ```
   static const stepByStep = Prompt(
     role: 'clear and precise instructor',

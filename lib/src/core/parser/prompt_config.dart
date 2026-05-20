@@ -89,17 +89,65 @@ class Prompt {
     this.compressed = true,
   });
 
+  /// The AI's identity — what it is and what it does.
+  ///
+  /// Example: `'mobile game expert for Egyptian users'`
   final String? role;
+
+  /// The primary objective the model should optimize for.
+  ///
+  /// Example: `'suggest games that match the user mood and age'`
   final String? goal;
+
+  /// Rules the model must always follow.
+  ///
+  /// Example: `['mobile only', 'no violent games', 'available in Egypt']`
   final List<String> constraints;
+
+  /// The structure the model uses to format its response.
+  ///
+  /// See [ResponseFormat] for all options.
   final ResponseFormat format;
+
+  /// The language the model responds in.
+  ///
+  /// Use [ResponseLanguage.auto] to detect per-message. See [ResponseLanguage].
   final ResponseLanguage language;
+
+  /// The writing tone the model uses.
+  ///
+  /// See [ResponseTone] for all options.
   final ResponseTone tone;
+
+  /// Maximum number of items to return for list formats.
+  ///
+  /// Only applies when [format] is a list type (`isList == true`).
+  /// Pair with [stopSignalMode] to stop the model exactly at the limit.
   final int? maxItems;
+
+  /// Input/output examples shown to the model before each request.
+  ///
+  /// See [PromptExample]. Use [exampleSelector] to pick examples dynamically.
   final List<PromptExample> examples;
+
+  /// Controls whether and how a stop signal is added to the prompt.
+  ///
+  /// See [StopSignalMode]. Pair with [Prompt.stopSequences] on [GeminiConfig].
   final StopSignalMode stopSignalMode;
+
+  /// The custom stop word used when [stopSignalMode] is [StopSignalMode.manual].
+  ///
+  /// Example: `'[DONE]'`
   final String? customStopSignal;
+
+  /// Who the model is speaking to — shapes vocabulary and explanation depth.
+  ///
+  /// Example: `'Egyptian teenagers'`
   final String? audience;
+
+  /// Background information the model should keep in mind when responding.
+  ///
+  /// Example: `'Egyptian mobile gaming market'`
   final String? context;
 
   /// Forces the model to start its response with this exact phrase.

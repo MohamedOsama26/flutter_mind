@@ -49,7 +49,7 @@ Most AI packages for Flutter just wrap the API — you still have to write the p
 
 ```yaml
 dependencies:
-  flutter_mind: ^0.0.1
+  flutter_mind: ^0.1.0
 ```
 
 ```bash

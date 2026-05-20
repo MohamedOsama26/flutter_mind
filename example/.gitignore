@@ -43,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Generated platform folders — run `flutter create .` to regenerate
+/android/
+/ios/
+/linux/
+/macos/
+/web/
+/windows/
+
+# Generated metadata and lock files
+.metadata
+pubspec.lock
+
+# Default generated test — not useful for a package example
+/test/

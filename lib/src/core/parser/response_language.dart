@@ -1,11 +1,11 @@
 /// The language the AI should use in its response.
 ///
-/// Pass this to [PromptConfig] to control which language the model
+/// Pass this to [Prompt] to control which language the model
 /// writes in. [auto] is the smart default — the model detects the
 /// user's language from their message and replies in the same language.
 ///
 /// ```dart
-/// PromptConfig(
+/// Prompt(
 ///   language: ResponseLanguage.auto, // matches whatever the user writes
 /// )
 /// ```
@@ -30,7 +30,7 @@ enum ResponseLanguage {
   /// Detect the user's language automatically and reply in the same language.
   ///
   /// This is the recommended default. [MessageAnalyzer] detects whether
-  /// the message is Arabic, English, or mixed, and the [PromptBuilder]
+  /// the message is Arabic, English, or mixed, and [Prompt.build]
   /// injects the matching language instruction.
   ///
   /// Arabic detection uses the Unicode range ؀–ۿ.

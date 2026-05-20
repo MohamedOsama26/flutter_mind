@@ -1,11 +1,11 @@
 /// The tone and style the AI should use when writing its response.
 ///
-/// Pass this to [PromptConfig] to shape how the model communicates —
-/// not what it says, but how it says it. The [PromptBuilder] converts
+/// Pass this to [Prompt] to shape how the model communicates —
+/// not what it says, but how it says it. [Prompt.build] converts
 /// this into a natural-language instruction in the system prompt.
 ///
 /// ```dart
-/// PromptConfig(
+/// Prompt(
 ///   tone: ResponseTone.friendly,
 ///   format: ResponseFormat.bulletedList,
 /// )

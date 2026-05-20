@@ -17,10 +17,10 @@ import 'package:flutter_mind/flutter_mind.dart';
 void main() {
   FlutterMind.init(
     engine: GeminiEngine(
-      apiKey: 'YOUR_GEMINI_API_KEY', // 🔑 replace with your key
+      apiKey: 'YOUR_GEMINI_API_KEY',
       config: GeminiConfig(
-        model: GeminiModel.flash25,
-        systemPrompt: 'You are a helpful assistant. Keep responses short.',
+        model: GeminiModel.pro25, // omit to use flash25 by default
+        systemPrompt: Prompt(role: 'helpful assistant'),
         temperature: 0.7,
       ),
     ),
@@ -80,7 +80,9 @@ class _ExampleScreenState extends State<ExampleScreen> {
     } on ValidationException catch (e) {
       setState(() => _output = '⚠️ Validation: ${e.message}');
     } on EngineException catch (e) {
-      setState(() => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}');
+      setState(
+        () => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}',
+      );
     } finally {
       setState(() => _loading = false);
       _controller.clear();
@@ -146,7 +148,9 @@ class _ExampleScreenState extends State<ExampleScreen> {
     } on ValidationException catch (e) {
       setState(() => _output = '⚠️ Validation: ${e.message}');
     } on EngineException catch (e) {
-      setState(() => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}');
+      setState(
+        () => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}',
+      );
     } finally {
       setState(() => _loading = false);
       _controller.clear();
@@ -194,7 +198,9 @@ class _ExampleScreenState extends State<ExampleScreen> {
     } on ValidationException catch (e) {
       setState(() => _output = '⚠️ Validation: ${e.message}');
     } on EngineException catch (e) {
-      setState(() => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}');
+      setState(
+        () => _output = '❌ Engine error: ${e.message}\n\n${e.raw ?? ''}',
+      );
     } finally {
       setState(() => _loading = false);
       _controller.clear();
@@ -310,8 +316,9 @@ class _ExampleScreenState extends State<ExampleScreen> {
                   icon: const Icon(Icons.psychology),
                   label: const Text('Think'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
                   ),
                 ),
               ],

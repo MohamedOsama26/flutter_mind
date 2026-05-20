@@ -7,7 +7,7 @@ import 'package:flutter_mind/src/core/models/ai_model.dart';
 /// and returned as a single [AiResponse] at the end.
 ///
 /// ```dart
-/// final response = await FlutterMind.instance.send('suggest a game');
+/// final response = await FlutterMind.send(userMessage: 'suggest a game');
 ///
 /// print(response.text);
 /// print(response.totalTokens);
@@ -32,7 +32,7 @@ class AiResponse {
   /// Internal reasoning text from thinking models.
   ///
   /// Only populated when using a model with [Capability.thinking]
-  /// and a [thinkingBudget] greater than 0.
+  /// and a [GeminiConfig.thinkingLevel] greater than 0 tokens.
   ///
   /// `null` for non-thinking models or when thinking is disabled.
   final String? thinkingText;

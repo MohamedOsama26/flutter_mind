@@ -16,7 +16,7 @@ part of 'flutter_mind_exception.dart';
 ///
 /// ```dart
 /// try {
-///   final response = await FlutterMind.instance.send('hello');
+///   final response = await FlutterMind.send(userMessage: 'hello');
 /// } on EngineException catch (e) {
 ///   if (e.statusCode == 429) {
 ///     // rate limited — wait and retry
