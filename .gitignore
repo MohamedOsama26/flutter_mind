@@ -30,6 +30,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Native cmake build output (llama.cpp download + compiled objects)
+lib/src/core/engines/local/native/build/
+
 # Temp/scratch folders
 lib/src/trash/
 
