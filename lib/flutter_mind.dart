@@ -4,6 +4,7 @@ export 'src/ai_response.dart';
 export 'src/ai_request.dart';
 export 'src/core/engines/ai_engine.dart';
 export 'src/core/engines/gemini_engine.dart';
+export 'src/core/engines/local_engine.dart';
 export 'src/core/configs/ai_config.dart';
 export 'src/core/configs/retry_config.dart';
 export 'src/core/models/ai_model.dart';

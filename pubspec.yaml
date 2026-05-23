@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   dio: ^5.9.2
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:
