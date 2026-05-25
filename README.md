@@ -508,7 +508,14 @@ Future<String> downloadModel() async {
 
 #### Android
 
-**2a.** Copy [`lib/src/core/engines/local/android/CMakeLists.txt`](lib/src/core/engines/local/android/CMakeLists.txt) from this package into your app's `android/app/` folder.
+**2a.** Copy two things from this package into your Android app:
+
+| What to copy | Where to put it |
+|---|---|
+| `lib/src/core/engines/local/android/CMakeLists.txt` | `android/app/CMakeLists.txt` |
+| `lib/src/core/engines/local/native/` (entire folder) | `android/native/` |
+
+The CMakeLists references `../native/` for the C++ source, so both must be present.
 
 **2b.** Add `externalNativeBuild` to your `android/app/build.gradle`:
 

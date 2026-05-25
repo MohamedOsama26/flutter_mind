@@ -7,7 +7,7 @@ include(FetchContent)
 
 # Pin to a specific llama.cpp release tag for reproducible builds.
 # Find the latest release at: https://github.com/ggerganov/llama.cpp/releases
-set(LLAMA_CPP_TAG "b3958" CACHE STRING "llama.cpp release tag")
+set(LLAMA_CPP_TAG "b4659" CACHE STRING "llama.cpp release tag")
 
 FetchContent_Declare(
     llama_cpp
