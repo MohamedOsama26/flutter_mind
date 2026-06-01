@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_mind/src/core/configs/ai_config.dart';
 import 'package:flutter_mind/src/core/engines/ai_engine.dart';
@@ -42,6 +43,92 @@ typedef _PromptDart = Pointer<Utf8> Function(Pointer<Utf8> prompt);
 
 typedef _CleanupC    = Void Function();
 typedef _CleanupDart = void Function();
+
+// ─── Isolate helpers ────────────────────────────────────────────────────────
+//
+// Isolate.run() can only call TOP-LEVEL functions — not class methods or
+// lambdas that capture `this`. Everything below must live outside the class.
+
+/// Bundles all config values needed to initialize the model.
+///
+/// Passed across the isolate boundary, so it must be a plain data object
+/// with no references to class instances or platform channels.
+class _LocalInitArgs {
+  final String modelPath;
+  final String systemPrompt;
+  final double temperature;
+  final int maxTokens;
+  final int contextSize;
+  final double repeatPenalty;
+  final double topP;
+  final int topK;
+  final int seed;
+  final int threads;
+  final int modelType;
+
+  const _LocalInitArgs({
+    required this.modelPath,
+    required this.systemPrompt,
+    required this.temperature,
+    required this.maxTokens,
+    required this.contextSize,
+    required this.repeatPenalty,
+    required this.topP,
+    required this.topK,
+    required this.seed,
+    required this.threads,
+    required this.modelType,
+  });
+}
+
+/// Opens the compiled native library for the current platform.
+///
+/// Top-level so it can be called from inside an isolate.
+/// Each isolate opens its own handle — isolates don't share memory.
+DynamicLibrary _openLib() {
+  if (Platform.isAndroid || Platform.isLinux) {
+    return DynamicLibrary.open('liblocal_model.so');
+  }
+  if (Platform.isIOS) return DynamicLibrary.process();
+  if (Platform.isMacOS) return DynamicLibrary.open('liblocal_model.dylib');
+  throw const EngineException('LocalEngine: platform not supported.');
+}
+
+/// Loads the model inside the isolate and returns true on success.
+///
+/// Runs in a background isolate via [Isolate.run] — never blocks the UI thread.
+/// All args come from [_LocalInitArgs] because isolates can't capture class state.
+bool _runInit(_LocalInitArgs a) {
+  final lib = _openLib();
+  final fn = lib.lookupFunction<_InitParamsC, _InitParamsDart>(
+    'local_model_init_params',
+  );
+  final pathPtr = a.modelPath.toNativeUtf8();
+  final sysPtr  = a.systemPrompt.toNativeUtf8();
+  final result  = fn(
+    pathPtr, sysPtr,
+    a.temperature, a.maxTokens, a.contextSize,
+    a.repeatPenalty, a.topP, a.topK,
+    a.seed, a.threads, a.modelType,
+  );
+  calloc.free(pathPtr);
+  calloc.free(sysPtr);
+  return result == 0;
+}
+
+/// Runs inference inside the isolate and returns the response text.
+///
+/// Runs in a background isolate via [Isolate.run] — never blocks the UI thread.
+/// Returns empty string if the native call returns a null pointer.
+String _runPrompt(String prompt) {
+  final lib = _openLib();
+  final fn = lib.lookupFunction<_PromptC, _PromptDart>('local_model_prompt');
+  final ptr    = prompt.toNativeUtf8();
+  final result = fn(ptr);
+  final text   = result == nullptr ? '' : result.toDartString().trim();
+  calloc.free(ptr);
+  return text;
+}
 
 // ─── Engine ─────────────────────────────────────────────────────────────────
 
@@ -94,9 +181,7 @@ class LocalEngine implements AiEngine {
   final LocalConfig _defaultConfig;
   bool _initialized = false;
 
-  // FFI function bindings
-  late final _InitParamsDart _ffiInit;
-  late final _PromptDart _ffiPrompt;
+  // cleanup is called on the main thread in dispose() — kept as a field
   late final _CleanupDart _ffiCleanup;
 
   // ─── AiEngine interface ───────────────────────────────────────────────────
@@ -121,10 +206,8 @@ class LocalEngine implements AiEngine {
       maxHistoryMessages: maxHistoryMessages,
     );
 
-    final promptPtr = prompt.toNativeUtf8();
-    final responsePtr = _ffiPrompt(promptPtr);
-    final text = responsePtr.toDartString().trim();
-    calloc.free(promptPtr);
+    // run inference in background — does NOT block the UI thread
+    final text = await Isolate.run(() => _runPrompt(prompt));
 
     return AiResponse(
       text: text,
@@ -191,17 +274,18 @@ class LocalEngine implements AiEngine {
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
-  /// Loads the native library and initializes the model on first call.
+  /// Initializes the model on first call.
+  ///
+  /// Binds [_ffiCleanup] on the main thread (needed by [dispose]),
+  /// then loads the model in a background isolate so the UI stays responsive.
+  /// Loading typically takes 5–30 seconds depending on model size.
   Future<void> _ensureInitialized(LocalConfig config) async {
     if (_initialized) return;
 
-    // load native library
+    // bind cleanup on main thread — dispose() calls it directly
     final lib = _loadLibrary();
-    _ffiInit    = lib.lookupFunction<_InitParamsC,    _InitParamsDart>('local_model_init_params');
-    _ffiPrompt  = lib.lookupFunction<_PromptC,        _PromptDart>    ('local_model_prompt');
-    _ffiCleanup = lib.lookupFunction<_CleanupC,       _CleanupDart>   ('local_model_cleanup');
+    _ffiCleanup = lib.lookupFunction<_CleanupC, _CleanupDart>('local_model_cleanup');
 
-    // check model file exists
     if (!await isAvailable()) {
       throw EngineException(
         'LocalEngine: model file not found at "${config.modelPath}". '
@@ -209,28 +293,24 @@ class LocalEngine implements AiEngine {
       );
     }
 
-    // init with config
-    final modelPathPtr    = config.modelPath.toNativeUtf8();
-    final systemPromptPtr = (config.systemPrompt?.build(userMessage: '') ?? '').toNativeUtf8();
-
-    final result = _ffiInit(
-      modelPathPtr,
-      systemPromptPtr,
-      config.temperature ?? 0.7,
-      config.maxOutputTokens ?? 512,
-      config.contextSize ?? 2048,
-      config.repeatPenalty ?? 1.1,
-      config.topP ?? 0.9,
-      config.topK ?? 40,
-      config.seed ?? -1,
-      config.threads ?? 0,
-      config.modelType.index,
+    // load model in background — does NOT block the UI thread
+    final ok = await Isolate.run(
+      () => _runInit(_LocalInitArgs(
+        modelPath:     config.modelPath,
+        systemPrompt:  config.systemPrompt?.build(userMessage: '') ?? '',
+        temperature:   config.temperature ?? 0.7,
+        maxTokens:     config.maxOutputTokens ?? 512,
+        contextSize:   config.contextSize ?? 2048,
+        repeatPenalty: config.repeatPenalty ?? 1.1,
+        topP:          config.topP ?? 0.9,
+        topK:          config.topK ?? 40,
+        seed:          config.seed ?? -1,
+        threads:       config.threads ?? 0,
+        modelType:     config.modelType.index,
+      )),
     );
 
-    calloc.free(modelPathPtr);
-    calloc.free(systemPromptPtr);
-
-    if (result != 0) {
+    if (!ok) {
       throw EngineException(
         'LocalEngine: failed to load model at "${config.modelPath}". '
         'Make sure the file is a valid .gguf model.',
