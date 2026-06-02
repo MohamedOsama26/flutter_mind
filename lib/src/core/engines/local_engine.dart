@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
@@ -181,8 +182,11 @@ class LocalEngine implements AiEngine {
   final LocalConfig _defaultConfig;
   bool _initialized = false;
 
-  // cleanup is called on the main thread in dispose() — kept as a field
-  late final _CleanupDart _ffiCleanup;
+  // nullable instead of late final — _ensureInitialized can be entered concurrently
+  _CleanupDart? _ffiCleanup;
+
+  // guards against concurrent initialization — second caller waits on this
+  Completer<void>? _initCompleter;
 
   // ─── AiEngine interface ───────────────────────────────────────────────────
 
@@ -267,7 +271,7 @@ class LocalEngine implements AiEngine {
   @override
   void dispose() {
     if (_initialized) {
-      _ffiCleanup();
+      _ffiCleanup?.call();
       _initialized = false;
     }
   }
@@ -276,48 +280,65 @@ class LocalEngine implements AiEngine {
 
   /// Initializes the model on first call.
   ///
-  /// Binds [_ffiCleanup] on the main thread (needed by [dispose]),
-  /// then loads the model in a background isolate so the UI stays responsive.
-  /// Loading typically takes 5–30 seconds depending on model size.
+  /// Uses a [Completer] so concurrent calls (e.g. two messages sent before
+  /// the model finishes loading) wait on the same initialization instead of
+  /// re-entering and crashing. Loading runs in a background isolate so the
+  /// UI stays responsive. Typically takes 5–30 seconds depending on model size.
   Future<void> _ensureInitialized(LocalConfig config) async {
     if (_initialized) return;
 
-    // bind cleanup on main thread — dispose() calls it directly
-    final lib = _loadLibrary();
-    _ffiCleanup = lib.lookupFunction<_CleanupC, _CleanupDart>('local_model_cleanup');
-
-    if (!await isAvailable()) {
-      throw EngineException(
-        'LocalEngine: model file not found at "${config.modelPath}". '
-        'Download the model first.',
-      );
+    if (_initCompleter != null) {
+      // another call is already initializing — wait for it to finish
+      await _initCompleter!.future;
+      return;
     }
 
-    // load model in background — does NOT block the UI thread
-    final ok = await Isolate.run(
-      () => _runInit(_LocalInitArgs(
-        modelPath:     config.modelPath,
-        systemPrompt:  config.systemPrompt?.build(userMessage: '') ?? '',
-        temperature:   config.temperature ?? 0.7,
-        maxTokens:     config.maxOutputTokens ?? 512,
-        contextSize:   config.contextSize ?? 2048,
-        repeatPenalty: config.repeatPenalty ?? 1.1,
-        topP:          config.topP ?? 0.9,
-        topK:          config.topK ?? 40,
-        seed:          config.seed ?? -1,
-        threads:       config.threads ?? 0,
-        modelType:     config.modelType.index,
-      )),
-    );
+    _initCompleter = Completer<void>();
 
-    if (!ok) {
-      throw EngineException(
-        'LocalEngine: failed to load model at "${config.modelPath}". '
-        'Make sure the file is a valid .gguf model.',
+    try {
+      // bind cleanup on main thread — dispose() calls it directly
+      final lib = _loadLibrary();
+      _ffiCleanup = lib.lookupFunction<_CleanupC, _CleanupDart>('local_model_cleanup');
+
+      if (!await isAvailable()) {
+        throw EngineException(
+          'LocalEngine: model file not found at "${config.modelPath}". '
+          'Download the model first.',
+        );
+      }
+
+      // load model in background — does NOT block the UI thread
+      final ok = await Isolate.run(
+        () => _runInit(_LocalInitArgs(
+          modelPath:     config.modelPath,
+          systemPrompt:  config.systemPrompt?.build(userMessage: '') ?? '',
+          temperature:   config.temperature ?? 0.7,
+          maxTokens:     config.maxOutputTokens ?? 512,
+          contextSize:   config.contextSize ?? 2048,
+          repeatPenalty: config.repeatPenalty ?? 1.1,
+          topP:          config.topP ?? 0.9,
+          topK:          config.topK ?? 40,
+          seed:          config.seed ?? -1,
+          threads:       config.threads ?? 4,
+          modelType:     config.modelType.index,
+        )),
       );
-    }
 
-    _initialized = true;
+      if (!ok) {
+        throw EngineException(
+          'LocalEngine: failed to load model at "${config.modelPath}". '
+          'Make sure the file is a valid .gguf model.',
+        );
+      }
+
+      _initialized = true;
+      _initCompleter!.complete();
+    } catch (e) {
+      // reset so a retry is possible after a failure
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+      rethrow;
+    }
   }
 
   /// Loads the compiled native library for the current platform.
