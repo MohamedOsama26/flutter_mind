@@ -398,7 +398,7 @@ class LocalEngine implements AiEngine {
       repeatPenalty: config.repeatPenalty ?? 1.1,
       topP:          config.topP          ?? 0.9,
       topK:          config.topK          ?? 40,
-      threads:       config.threads       ?? 0,
+      threads:       config.threads       ?? 4,
     );
   }
 }
