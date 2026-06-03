@@ -23,7 +23,40 @@ part of 'ai_config.dart';
 ///   ),
 /// );
 /// ```
+/// ## Parameter reference
+///
+/// | Parameter         | What it controls                        | Most apps need it?   |
+/// |-------------------|-----------------------------------------|----------------------|
+/// | [modelPath]       | Path to the .gguf model file on device  | ✅ Always            |
+/// | [systemPrompt]    | AI persona and instructions             | ✅ Always            |
+/// | [temperature]     | Creativity level                        | ✅ Always            |
+/// | [maxOutputTokens] | Max response length in tokens           | ✅ Recommended       |
+/// | [stopSequences]   | Strings that stop generation immediately| ✅ Recommended       |
+/// | [modelType]       | Chat template format for the model      | ✅ Recommended       |
+/// | [contextSize]     | Conversation memory window in tokens    | ⚠️ Sometimes        |
+/// | [repeatPenalty]   | Reduce repeated words in output         | ⚠️ Sometimes        |
+/// | [topP]            | Creativity control (advanced)           | ❌ Leave default     |
+/// | [topK]            | Creativity control (advanced)           | ❌ Leave default     |
+/// | [threads]         | CPU threads for inference               | ❌ Leave default     |
+/// | [seed]            | Reproducible output for testing         | ❌ Testing only      |
 class LocalConfig extends AiConfig {
+  /// Creates a local model configuration.
+  ///
+  /// Only [modelPath] is required. All other parameters fall back to
+  /// safe defaults tuned for mobile performance.
+  ///
+  /// ```dart
+  /// // Minimal — just the model path
+  /// LocalConfig(modelPath: '/data/user/0/com.app/files/qwen.gguf')
+  ///
+  /// // With persona and stop sequences for Qwen
+  /// LocalConfig(
+  ///   modelPath: '/path/to/qwen.gguf',
+  ///   systemPrompt: Prompt(role: 'helpful assistant'),
+  ///   stopSequences: ['<|im_end|>', '<|im_start|>'],
+  ///   modelType: LocalModelType.qwen,
+  /// )
+  /// ```
   const LocalConfig({
     required this.modelPath,
     super.systemPrompt,
@@ -65,9 +98,13 @@ class LocalConfig extends AiConfig {
   /// Useful for testing. Default: -1 (random)
   final int? seed;
 
-  /// Number of CPU threads to use.
+  /// Number of CPU threads for inference.
   ///
-  /// Default: auto-detect from device.
+  /// Default: 4 — targets the performance cores on most phones without
+  /// saturating the efficiency cores, which keeps the OS responsive.
+  ///
+  /// Only change this if you have profiled your target device and confirmed
+  /// a different value is faster.
   final int? threads;
 
   /// Chat template format for the model.
