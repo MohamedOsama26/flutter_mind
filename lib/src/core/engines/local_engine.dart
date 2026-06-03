@@ -194,6 +194,9 @@ class LocalEngine implements AiEngine {
   // guards against concurrent initialization — second caller waits on this
   Completer<void>? _initCompleter;
 
+  // guards against concurrent inference — llama_decode crashes if called from two isolates simultaneously
+  Completer<void>? _inferenceCompleter;
+
   // ─── AiEngine interface ───────────────────────────────────────────────────
 
   @override
@@ -209,20 +212,31 @@ class LocalEngine implements AiEngine {
     final resolved = _mergeConfig(config);
     await _ensureInitialized(resolved);
 
-    // build full prompt with history
+    // wait if another inference is already running —
+    // llama_decode crashes if called from two isolates simultaneously
+    if (_inferenceCompleter != null) {
+      await _inferenceCompleter!.future;
+    }
+
+    _inferenceCompleter = Completer<void>();
+
     final prompt = _buildPrompt(
       userMessage: userMessage,
       history: history,
       maxHistoryMessages: maxHistoryMessages,
     );
 
-    // run inference in background — does NOT block the UI thread
-    final text = await Isolate.run(() => _runPrompt(prompt));
-
-    return AiResponse(
-      text: text,
-      model: model,
-    );
+    try {
+      // run inference in background — does NOT block the UI thread
+      final text = await Isolate.run(() => _runPrompt(prompt));
+      _inferenceCompleter!.complete();
+      _inferenceCompleter = null;
+      return AiResponse(text: text, model: model);
+    } catch (e) {
+      _inferenceCompleter!.completeError(e);
+      _inferenceCompleter = null;
+      rethrow;
+    }
   }
 
   @override
