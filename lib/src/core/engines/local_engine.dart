@@ -296,6 +296,26 @@ class LocalEngine implements AiEngine {
     }
   }
 
+  // ─── Test helpers ─────────────────────────────────────────────────────────
+  // These expose internals for unit tests only — do not use in production code.
+
+  /// Exposes the resolved default config for unit tests.
+  // ignore: invalid_use_of_visible_for_testing_member
+  LocalConfig get defaultConfig => _defaultConfig;
+
+  /// Exposes [_buildPrompt] for unit tests.
+  // ignore: invalid_use_of_visible_for_testing_member
+  String testBuildPrompt({
+    required String userMessage,
+    List<ChatMessage>? history,
+    int maxHistoryMessages = 20,
+  }) =>
+      _buildPrompt(
+        userMessage: userMessage,
+        history: history,
+        maxHistoryMessages: maxHistoryMessages,
+      );
+
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   /// Initializes the model on first call.
