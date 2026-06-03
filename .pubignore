@@ -1,2 +1,8 @@
 # Flutter tool metadata — needed locally, not part of the published package
 .metadata
+
+# Native cmake build output — llama.cpp source downloaded by FetchContent at build time
+# This is NOT part of the package — developers download it via cmake during their build
+lib/src/core/engines/local/native/build/
+lib/src/core/engines/local/android/build/
+lib/src/core/engines/local/ios/build/
