@@ -15,6 +15,7 @@ import 'package:flutter_mind/src/ai_response.dart';
 typedef _InitParamsC = Int32 Function(
   Pointer<Utf8> modelPath,
   Pointer<Utf8> systemPrompt,
+  Pointer<Utf8> stopSequences,
   Float temperature,
   Int32 maxTokens,
   Int32 contextSize,
@@ -28,6 +29,7 @@ typedef _InitParamsC = Int32 Function(
 typedef _InitParamsDart = int Function(
   Pointer<Utf8> modelPath,
   Pointer<Utf8> systemPrompt,
+  Pointer<Utf8> stopSequences,
   double temperature,
   int maxTokens,
   int contextSize,
@@ -57,6 +59,7 @@ typedef _CleanupDart = void Function();
 class _LocalInitArgs {
   final String modelPath;
   final String systemPrompt;
+  final String stopSequences; // \x1F-delimited e.g. "<|im_end|>\x1F<|im_start|>"
   final double temperature;
   final int maxTokens;
   final int contextSize;
@@ -70,6 +73,7 @@ class _LocalInitArgs {
   const _LocalInitArgs({
     required this.modelPath,
     required this.systemPrompt,
+    required this.stopSequences,
     required this.temperature,
     required this.maxTokens,
     required this.contextSize,
@@ -106,14 +110,16 @@ bool _runInit(_LocalInitArgs a) {
   );
   final pathPtr = a.modelPath.toNativeUtf8();
   final sysPtr  = a.systemPrompt.toNativeUtf8();
+  final stopPtr = a.stopSequences.toNativeUtf8();
   final result  = fn(
-    pathPtr, sysPtr,
+    pathPtr, sysPtr, stopPtr,
     a.temperature, a.maxTokens, a.contextSize,
     a.repeatPenalty, a.topP, a.topK,
     a.seed, a.threads, a.modelType,
   );
   calloc.free(pathPtr);
   calloc.free(sysPtr);
+  calloc.free(stopPtr);
   return result == 0;
 }
 
@@ -312,6 +318,7 @@ class LocalEngine implements AiEngine {
         () => _runInit(_LocalInitArgs(
           modelPath:     config.modelPath,
           systemPrompt:  config.systemPrompt?.build(userMessage: '') ?? '',
+          stopSequences: (config.stopSequences ?? []).join('\x1F'),
           temperature:   config.temperature ?? 0.7,
           maxTokens:     config.maxOutputTokens ?? 512,
           contextSize:   config.contextSize ?? 2048,

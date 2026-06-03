@@ -17,6 +17,7 @@ extern "C"
     {
         const char *model_path;
         const char *system_prompt;
+        const char *stop_sequences; // \x1F-delimited list e.g. "<|im_end|>\x1F<|im_start|>"
         float temperature;
         int max_tokens;
         int context_size;
@@ -33,6 +34,7 @@ extern "C"
     int local_model_init_params(
         const char *model_path,
         const char *system_prompt,
+        const char *stop_sequences, // \x1F-delimited, pass "" for none
         float temperature,
         int max_tokens,
         int context_size,

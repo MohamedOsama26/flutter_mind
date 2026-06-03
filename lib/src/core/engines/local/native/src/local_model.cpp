@@ -5,10 +5,11 @@
 #include <cstring>
 #include <thread>
 
-static llama_model *g_model = nullptr;     // Global model instance (placeholder)
-static llama_context *g_context = nullptr; // Global context instance (placeholder)
-static std::string g_response;             // Buffer for the response string
+static llama_model *g_model = nullptr;
+static llama_context *g_context = nullptr;
+static std::string g_response;
 static LocalModelConfig g_config;
+static std::vector<std::string> g_stop_sequences; // parsed from config.stop_sequences
 
 // detect model type from gguf metadata
 static int detect_model_type()
@@ -79,9 +80,48 @@ static std::string format_prompt(const char *prompt)
     return sys + "\n" + prompt;
 }
 
+// splits \x1F-delimited string into a vector of stop sequences
+static std::vector<std::string> parse_stop_sequences(const char *raw)
+{
+    std::vector<std::string> result;
+    if (!raw || raw[0] == '\0') return result;
+    std::string s(raw);
+    size_t start = 0, pos;
+    while ((pos = s.find('\x1F', start)) != std::string::npos) {
+        if (pos > start) result.push_back(s.substr(start, pos - start));
+        start = pos + 1;
+    }
+    if (start < s.size()) result.push_back(s.substr(start));
+    return result;
+}
+
+// returns true if response currently ends with any stop sequence
+static bool ends_with_stop(const std::string &response)
+{
+    for (const auto &stop : g_stop_sequences) {
+        if (response.size() >= stop.size() &&
+            response.compare(response.size() - stop.size(), stop.size(), stop) == 0)
+            return true;
+    }
+    return false;
+}
+
+// removes the matching stop sequence from the end of response
+static void trim_stop(std::string &response)
+{
+    for (const auto &stop : g_stop_sequences) {
+        if (response.size() >= stop.size() &&
+            response.compare(response.size() - stop.size(), stop.size(), stop) == 0) {
+            response.erase(response.size() - stop.size());
+            return;
+        }
+    }
+}
+
 int local_model_init(LocalModelConfig config)
 {
     g_config = config;
+    g_stop_sequences = parse_stop_sequences(config.stop_sequences);
     llama_backend_init();                                                  // Placeholder: Initialize the backend (e.g., load libraries, set up threads, etc.)
     llama_model_params model_params = llama_model_default_params();        // Placeholder: Get default model parameters
     g_model = llama_model_load_from_file(config.model_path, model_params);
@@ -177,6 +217,12 @@ const char *local_model_prompt(const char *prompt)
         if (n > 0)
             g_response += std::string(buf, n);
 
+        // stop immediately if response ends with a user-defined stop sequence
+        if (ends_with_stop(g_response)) {
+            trim_stop(g_response);
+            break;
+        }
+
         // feed back
         batch = llama_batch_get_one(&token, 1);
         llama_decode(g_context, batch);
@@ -184,13 +230,8 @@ const char *local_model_prompt(const char *prompt)
 
     llama_sampler_free(sampler);
 
-    // strip trailing stop tokens that may not be caught by llama_vocab_is_eog
-    static const char* stop_strings[] = { "<|im_end|>", "<|endoftext|>", "[/INST]", "<|eot_id|>" };
-    for (const char* stop : stop_strings) {
-        size_t pos = g_response.rfind(stop);
-        if (pos != std::string::npos)
-            g_response.erase(pos);
-    }
+    // safety net — trim any stop sequence that spans the final token boundary
+    trim_stop(g_response);
 
     return g_response.c_str();
 }
@@ -199,6 +240,7 @@ const char *local_model_prompt(const char *prompt)
 extern "C" int local_model_init_params(
     const char *model_path,
     const char *system_prompt,
+    const char *stop_sequences,
     float temperature,
     int max_tokens,
     int context_size,
@@ -212,6 +254,7 @@ extern "C" int local_model_init_params(
     LocalModelConfig config = {};
     config.model_path = model_path;
     config.system_prompt = (system_prompt && system_prompt[0]) ? system_prompt : nullptr;
+    config.stop_sequences = (stop_sequences && stop_sequences[0]) ? stop_sequences : nullptr;
     config.temperature = temperature;
     config.max_tokens = max_tokens;
     config.context_size = context_size;
