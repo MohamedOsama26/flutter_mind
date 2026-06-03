@@ -10,6 +10,8 @@ static llama_context *g_context = nullptr;
 static std::string g_response;
 static LocalModelConfig g_config;
 static std::vector<std::string> g_stop_sequences; // parsed from config.stop_sequences
+// owns the system prompt string — Dart frees its native buffer after init returns
+static char g_system_prompt_buf[4096] = {};
 
 // detect model type from gguf metadata
 static int detect_model_type()
@@ -252,8 +254,15 @@ extern "C" int local_model_init_params(
     int model_type)
 {
     LocalModelConfig config = {};
-    config.model_path = model_path;
-    config.system_prompt = (system_prompt && system_prompt[0]) ? system_prompt : nullptr;
+    config.model_path = model_path; // safe — llama.cpp copies the path internally
+    // copy system_prompt into stable storage — Dart frees the native buffer after this call returns
+    if (system_prompt && system_prompt[0]) {
+        strncpy(g_system_prompt_buf, system_prompt, sizeof(g_system_prompt_buf) - 1);
+        g_system_prompt_buf[sizeof(g_system_prompt_buf) - 1] = '\0';
+        config.system_prompt = g_system_prompt_buf;
+    } else {
+        config.system_prompt = nullptr;
+    }
     config.stop_sequences = (stop_sequences && stop_sequences[0]) ? stop_sequences : nullptr;
     config.temperature = temperature;
     config.max_tokens = max_tokens;
