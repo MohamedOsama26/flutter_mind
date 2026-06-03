@@ -508,14 +508,13 @@ Future<String> downloadModel() async {
 
 #### Android
 
-**2a.** Copy two things from this package into your Android app:
+**2a.** Download these three files and place them in your app as shown:
 
-| What to copy | Where to put it |
+| Download | Save as |
 |---|---|
-| `lib/src/core/engines/local/android/CMakeLists.txt` | `android/app/CMakeLists.txt` |
-| `lib/src/core/engines/local/native/` (entire folder) | `android/native/` |
-
-The CMakeLists references `../native/` for the C++ source, so both must be present.
+| [CMakeLists.txt](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/android/CMakeLists.txt) | `android/app/CMakeLists.txt` |
+| [local_model.h](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/native/include/local_model.h) | `android/native/include/local_model.h` |
+| [local_model.cpp](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/native/src/local_model.cpp) | `android/native/src/local_model.cpp` |
 
 **2b.** Add `externalNativeBuild` to your `android/app/build.gradle`:
 
