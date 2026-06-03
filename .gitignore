@@ -30,8 +30,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Metadata and trash
-.metadata
+# Native cmake build output (llama.cpp download + compiled objects)
+lib/src/core/engines/local/native/build/
+
+# Temp/scratch folders
 lib/src/trash/
 
 # Example app — only lib/ and pubspec.yaml are tracked

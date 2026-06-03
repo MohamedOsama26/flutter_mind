@@ -1,3 +1,60 @@
+## 0.2.0
+
+### New — LocalEngine: offline on-device inference via llama.cpp
+
+Run AI models entirely offline — no API key, no internet, no server.
+The model runs on the device using llama.cpp compiled from C++.
+
+**New classes:**
+- `LocalEngine` — implements `AiEngine` for local .gguf models. Drop-in
+  replacement for `GeminiEngine` — same `send`, `stream`, `dispose` API.
+- `LocalConfig` — configuration for `LocalEngine`. Supports `modelPath`,
+  `systemPrompt`, `stopSequences`, `temperature`, `maxOutputTokens`,
+  `contextSize`, `repeatPenalty`, `topP`, `topK`, `threads`, `seed`,
+  `modelType`.
+- `LocalModelType` — chat template enum: `auto`, `qwen`, `llama3`, `gemma`,
+  `phi`, `mistral`, `deepSeek`. Use `auto` to detect from .gguf metadata.
+
+**Supported platforms:** Android, iOS, Linux, macOS (Windows coming soon).
+
+**Model support:** any quantized `.gguf` model from HuggingFace —
+Qwen 2.5, Llama 3, Gemma 3, Phi 4, Mistral, DeepSeek, and more.
+
+**Usage:**
+```dart
+FlutterMind.init(
+  engine: LocalEngine(
+    config: LocalConfig(
+      modelPath: '/data/user/0/com.app/files/models/qwen.gguf',
+      systemPrompt: Prompt(role: 'helpful assistant'),
+      stopSequences: ['<|im_end|>', '<|im_start|>'],
+      modelType: LocalModelType.qwen,
+    ),
+  ),
+);
+
+final response = await FlutterMind.send(userMessage: 'Hello!');
+```
+
+---
+
+### Fixed — LocalEngine stability
+
+- **UI never freezes** — model loading (5–30 s) and inference run in a
+  background `Isolate`. The main thread stays responsive throughout.
+- **Concurrent call protection** — sending two messages before the model
+  finishes loading no longer crashes. A `Completer` gate queues calls safely.
+- **SIGSEGV fix** — dangling pointer crash when using a long `systemPrompt`
+  (e.g. from `Prompt.build()`). The C++ layer now copies the string into stable
+  storage before Dart frees its native buffer.
+- **Stop sequences now work** — `LocalConfig.stopSequences` are passed through
+  FFI to C++ and checked after every generated token. Previously silently ignored.
+- **Default threads is 4** — was `0` (handed to `hardware_concurrency()`,
+  which uses all cores including slow efficiency cores). `4` targets performance
+  cores and keeps the OS responsive.
+
+---
+
 ## 0.1.0
 
 ### New — Prompt Engineering System

@@ -23,12 +23,12 @@ Most AI packages for Flutter just wrap the API — you still have to write the p
 
 **flutter_mind does more:**
 
-- 🔌 **One API for all providers** — switch from Gemini to Claude in one line
+- 🔌 **One API for all providers** — same interface for cloud and local models
 - 💬 **Multi-turn chat** — conversation history with automatic token trimming
 - ⚡ **Streaming** — typing-effect UI out of the box
 - 🧠 **Thinking models** — built-in support for reasoning budgets
 - 🛡️ **Safe by default** — input validation, retry logic, and clear error messages
-- 🎯 **Zero Firebase required** — just an API key
+- 🎯 **Zero Firebase required** — API key for cloud, or fully offline with no key at all
 
 ---
 
@@ -37,9 +37,9 @@ Most AI packages for Flutter just wrap the API — you still have to write the p
 | Provider | Status | Models |
 |---|---|---|
 | Google Gemini | ✅ v1 | Flash 2.5, Pro 2.5, Flash-Lite, and more |
+| Local Model (offline) | ✅ v1 | Any `.gguf` — Qwen, Llama, Gemma, Phi, Mistral, and more |
 | OpenAI | 🔜 v2 | GPT-4o, GPT-4o Mini |
 | Anthropic Claude | 🔜 v2 | Sonnet, Opus, Haiku |
-| Ollama (local) | 🔜 v2 | Llama, Mistral, DeepSeek |
 | Grok | 🔜 v2 | — |
 | DeepSeek | 🔜 v2 | — |
 
@@ -95,9 +95,10 @@ Three lines in `main()`. Done.
 
 1. Go to [console.anthropic.com](https://console.anthropic.com) → **API Keys** → **Create Key**
 
-### Ollama — Free, runs locally *(coming in v2)*
+### Local Model — No API key needed ✅
 
-1. Download from [ollama.com](https://ollama.com), then run `ollama pull llama3.2` — no API key needed
+No account, no key, no internet required. Just a `.gguf` model file on the device.
+See the [Local Model (Offline)](#local-model-offline) section for full setup.
 
 ---
 
@@ -444,6 +445,250 @@ await summaryClient.send(userMessage: longDocument);
 
 ---
 
+## Local Model (Offline)
+
+Run AI entirely on the user's device — no API key, no internet, no cost per request.
+Uses [llama.cpp](https://github.com/ggerganov/llama.cpp) under the hood via Dart FFI.
+
+### Platform support
+
+| Platform | Support | Notes |
+|---|---|---|
+| Android | ✅ | One-time `build.gradle` setup |
+| iOS | ✅ | Manual Xcode setup required |
+| Linux | ✅ | Manual cmake build required |
+| macOS | ✅ | Manual cmake build required |
+| Windows | ✅ | Manual cmake build required |
+| Web | ❌ | Dart FFI not supported on web |
+
+---
+
+### Step 1 — Get a model file
+
+Models are `.gguf` files downloaded at runtime to the device. They are **not** bundled in the app (too large for app stores).
+
+**Recommended starter models** from HuggingFace:
+
+| Model | Size | Speed | Quality |
+|---|---|---|---|
+| `Qwen2.5-1.5B-Instruct-Q4_K_M.gguf` | ~1 GB | ⚡ Very fast | Good |
+| `Qwen2.5-3B-Instruct-Q4_K_M.gguf` | ~2 GB | Fast | Better |
+| `gemma-3-1b-it-Q4_K_M.gguf` | ~0.8 GB | ⚡ Very fast | Good |
+| `Phi-3-mini-4k-instruct-q4.gguf` | ~2.2 GB | Fast | Better |
+
+Download in your app on first launch (show a progress bar):
+
+```dart
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+Future<String> downloadModel() async {
+  final dir = await getApplicationDocumentsDirectory();
+  final modelPath = '${dir.path}/models/qwen2.5-1.5b.gguf';
+
+  if (File(modelPath).existsSync()) return modelPath; // already downloaded
+
+  await Directory('${dir.path}/models').create(recursive: true);
+
+  final request = await HttpClient().getUrl(Uri.parse(
+    'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+  ));
+  final response = await request.close();
+  await response.pipe(File(modelPath).openWrite());
+
+  return modelPath;
+}
+```
+
+> Add [`path_provider`](https://pub.dev/packages/path_provider) to your `pubspec.yaml` dependencies.
+
+---
+
+### Step 2 — Platform setup
+
+#### Android
+
+**2a.** Download these three files and place them in your app as shown:
+
+| Download | Save as |
+|---|---|
+| [CMakeLists.txt](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/android/CMakeLists.txt) | `android/app/CMakeLists.txt` |
+| [local_model.h](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/native/include/local_model.h) | `android/native/include/local_model.h` |
+| [local_model.cpp](https://raw.githubusercontent.com/MohamedOsama26/flutter_mind/develop/lib/src/core/engines/local/native/src/local_model.cpp) | `android/native/src/local_model.cpp` |
+
+**2b.** Add `externalNativeBuild` to your `android/app/build.gradle`:
+
+```groovy
+android {
+    defaultConfig {
+        externalNativeBuild {
+            cmake {
+                abiFilters 'arm64-v8a', 'x86_64'
+                arguments '-DANDROID_STL=c++_shared'
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'   // the file you copied in step 2a
+            version '3.18.1'
+        }
+    }
+}
+```
+
+**2c.** Run `flutter build apk` — Gradle downloads llama.cpp and compiles the library automatically. This takes 5–10 minutes on the first build, then it is cached.
+
+---
+
+#### Desktop (Linux / macOS / Windows)
+
+**2a.** Navigate to the package source and build the library:
+
+```bash
+cd ~/.pub-cache/hosted/pub.dev/flutter_mind-0.1.0/lib/src/core/engines/local/native
+cmake -B build
+cmake --build build --config Release
+```
+
+**2b.** Copy the built library next to your app executable:
+
+```bash
+# Linux
+cp build/liblocal_model.so /path/to/your/app/build/linux/x64/release/bundle/
+
+# macOS
+cp build/liblocal_model.dylib /path/to/your/app/build/macos/Build/Products/Release/
+
+# Windows
+cp build/Release/local_model.dll /path/to/your/app/build/windows/x64/runner/Release/
+```
+
+Run `flutter build linux` (or `macos` / `windows`) as normal after this.
+
+---
+
+#### iOS
+
+**2a.** Build the static library from the package source on a Mac:
+
+```bash
+cd ~/.pub-cache/hosted/pub.dev/flutter_mind-0.1.0/lib/src/core/engines/local/ios/Classes
+cmake -B build -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0
+cmake --build build --config Release
+```
+
+**2b.** In Xcode:
+- Drag the built `liblocal_model.a` into your project
+- Add it to **Link Binary with Libraries** in your target's Build Phases
+- Add the `include/` folder to **Header Search Paths**
+
+---
+
+### Step 3 — Use it in Dart
+
+**Minimal:**
+
+```dart
+final modelPath = await downloadModel();
+
+final engine = LocalEngine(
+  config: LocalConfig(modelPath: modelPath),
+);
+
+final response = await engine.send(userMessage: 'Hello!');
+print(response.text);
+
+engine.dispose(); // free model memory when done
+```
+
+**With full config:**
+
+```dart
+final engine = LocalEngine(
+  config: LocalConfig(
+    modelPath: modelPath,
+    systemPrompt: Prompt(role: 'helpful assistant'),
+    modelType: LocalModelType.qwen,  // skip auto-detection
+    temperature: 0.8,
+    maxOutputTokens: 512,
+    contextSize: 4096,
+    repeatPenalty: 1.1,
+    topP: 0.9,
+    topK: 40,
+    seed: 42,        // fixed seed for reproducible output
+    threads: 4,      // CPU threads — 0 = auto-detect
+  ),
+);
+```
+
+**Streaming** (yields the full response at once — true token streaming coming in v2):
+
+```dart
+engine.stream(userMessage: 'Tell me a story').listen((chunk) {
+  setState(() => text += chunk);
+});
+```
+
+**With conversation history:**
+
+```dart
+final history = <ChatMessage>[];
+
+final r1 = await engine.send(userMessage: 'My name is Osama');
+history.add(ChatMessage.user('My name is Osama'));
+history.add(ChatMessage.model(r1.text));
+
+final r2 = await engine.send(
+  userMessage: 'What is my name?',
+  history: history,
+);
+print(r2.text); // "Your name is Osama"
+```
+
+---
+
+### LocalConfig reference
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `modelPath` | `String` | required | Absolute path to the `.gguf` file |
+| `systemPrompt` | `Prompt?` | null | Model persona and instructions |
+| `modelType` | `LocalModelType` | `auto` | Chat template format (auto-detected from file metadata) |
+| `temperature` | `double?` | 0.7 | Creativity — 0.0 deterministic, 2.0 very random |
+| `maxOutputTokens` | `int?` | 512 | Max tokens to generate per response |
+| `contextSize` | `int?` | 2048 | How many tokens of history the model remembers |
+| `repeatPenalty` | `double?` | 1.1 | Penalizes repeated words — range 1.0–2.0 |
+| `topP` | `double?` | 0.9 | Nucleus sampling threshold |
+| `topK` | `int?` | 40 | Limits token pool size |
+| `seed` | `int?` | random | Fixed seed for reproducible output |
+| `threads` | `int?` | auto | CPU threads — 0 auto-detects from device |
+
+### LocalModelType values
+
+| Value | Models |
+|---|---|
+| `LocalModelType.auto` | Detects from `.gguf` metadata — recommended |
+| `LocalModelType.qwen` | Qwen 2, 2.5 |
+| `LocalModelType.llama3` | Llama 3, 3.1, 3.2 |
+| `LocalModelType.gemma` | Gemma 1, 2, 3 |
+| `LocalModelType.phi` | Phi 2, 3, 4 |
+| `LocalModelType.mistral` | Mistral family |
+| `LocalModelType.deepSeek` | DeepSeek family |
+
+### Capabilities
+
+| Feature | Status |
+|---|---|
+| Text chat | ✅ |
+| System prompt | ✅ |
+| Conversation history | ✅ |
+| Streaming | ✅ (full response at once — true token streaming coming in v2) |
+| Vision / image input | ❌ coming in v2 |
+| Audio | ❌ coming in v2 |
+
+---
+
 ## Gemini Models
 
 | Constant | Model ID | Status | Best For |
@@ -520,6 +765,7 @@ Use [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) for local `.env` f
 
 ### v1 — Current
 - [x] Google Gemini engine
+- [x] Local model engine (llama.cpp — offline, no API key)
 - [x] Send and streaming
 - [x] Multi-turn conversation history
 - [x] Thinking model support (ThinkingLevel presets + custom budget)
@@ -533,8 +779,8 @@ Use [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) for local `.env` f
 ### v2 — Coming Soon
 - [ ] OpenAI engine
 - [ ] Anthropic Claude engine
-- [ ] Ollama engine (local models — no API key, no cost)
 - [ ] Response parser (JSON → typed Dart objects)
+- [ ] True token streaming for local models
 - [ ] flutter_mind_vision (image generation)
 - [ ] flutter_mind_audio (TTS, STT)
 

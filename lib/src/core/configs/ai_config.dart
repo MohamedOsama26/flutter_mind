@@ -23,7 +23,7 @@ part 'local_config.dart';
 /// // Use provider-specific config
 /// final gemini = GeminiEngine(
 ///   apiKey: 'key',
-///   defaultConfig: GeminiConfig(
+///   config: GeminiConfig(
 ///     model: GeminiModel.flash25,
 ///     temperature: 0.7,
 ///   ),
