@@ -1,18 +1,3 @@
-## 0.2.2
-
-### Fixed
-
-- **Token leaking into history** — stop sequences (`<|im_end|>`, `<|im_start|>`,
-  etc.) that C++ missed are now stripped on the Dart side before the response
-  is returned. Uses `substring` not `replaceAll` so everything after the stop
-  token (leaked next conversation turn) is also removed.
-- **Partial stop sequences at boundary** — handles the case where a stop
-  sequence is partially generated at the very end of a response (e.g.
-  `<|im_end|` missing the closing `>` due to token boundary). The partial
-  suffix is trimmed cleanly.
-
----
-
 ## 0.2.1
 
 ### Fixed
@@ -21,6 +6,14 @@
   context limit (default 2048 tokens), llama.cpp read beyond the window and
   produced random bytes. The context is now cleared automatically when within
   100 tokens of the limit.
+- **Token leaking into history** — stop sequences (`<|im_end|>`, `<|im_start|>`,
+  etc.) that C++ missed are now stripped on the Dart side before the response
+  is returned. Uses `substring` not `replaceAll` so everything after the stop
+  token (leaked next conversation turn) is also removed.
+- **Partial stop sequences at boundary** — handles the case where a stop
+  sequence is partially generated at the very end of a response (e.g.
+  `<|im_end|` missing the closing `>` due to token boundary). The partial
+  suffix is trimmed cleanly.
 
 ---
 
