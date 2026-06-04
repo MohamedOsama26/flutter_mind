@@ -1,3 +1,14 @@
+## 0.2.1
+
+### Fixed
+
+- **Garbage output on long conversations** — when the KV cache reached the
+  context limit (default 2048 tokens), llama.cpp read beyond the window and
+  produced random bytes. The context is now cleared automatically when within
+  100 tokens of the limit.
+
+---
+
 ## 0.2.0
 
 ### New — LocalEngine: offline on-device inference via llama.cpp
