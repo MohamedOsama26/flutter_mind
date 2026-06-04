@@ -305,12 +305,26 @@ class LocalEngine implements AiEngine {
   /// so everything after the stop token (leaked next turn) is also removed:
   /// "Hello!<|im_end|><|im_start|>user: ..." → "Hello!"
   ///
+  /// Also handles partial stop sequences at the end — e.g. "<|im_end|" missing
+  /// the closing ">" because the token was cut at the context boundary.
+  ///
   /// Uses only the developer's configured [stopSequences] — nothing hardcoded.
   String _cleanResponse(String text, List<String> stopSequences) {
     String result = text;
     for (final stop in stopSequences) {
+      // full occurrence — cut here and everything after
       final index = result.indexOf(stop);
-      if (index != -1) result = result.substring(0, index);
+      if (index != -1) {
+        result = result.substring(0, index);
+        continue;
+      }
+      // partial occurrence at end — e.g. "<|im_end|" without closing ">"
+      for (int len = stop.length - 1; len > 0; len--) {
+        if (result.endsWith(stop.substring(0, len))) {
+          result = result.substring(0, result.length - len);
+          break;
+        }
+      }
     }
     return result.trim();
   }
