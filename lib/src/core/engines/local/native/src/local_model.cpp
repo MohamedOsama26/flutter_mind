@@ -182,6 +182,12 @@ int local_model_init(LocalModelConfig config)
 
 const char *local_model_prompt(const char *prompt)
 {
+    // clear KV cache if context is almost full — prevents garbage output
+    int n_used = llama_kv_cache_used_cells(g_context);
+    int n_max  = g_config.context_size > 0 ? g_config.context_size : 2048;
+    if (n_used >= n_max - 100)
+        llama_kv_cache_clear(g_context);
+
     // apply the correct chat template before tokenising
     std::string formatted = format_prompt(prompt);
 
