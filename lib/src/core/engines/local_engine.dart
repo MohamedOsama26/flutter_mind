@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_mind/src/core/configs/ai_config.dart';
+import 'package:flutter_mind/src/core/events/local_engine_event.dart';
 import 'package:flutter_mind/src/core/engines/ai_engine.dart';
 import 'package:flutter_mind/src/core/exceptions/flutter_mind_exception.dart';
 import 'package:flutter_mind/src/core/models/ai_model.dart';
@@ -220,6 +221,9 @@ class LocalEngine implements AiEngine {
 
     _inferenceCompleter = Completer<void>();
 
+    resolved.onEvent?.call(InferenceStarted(userMessage: userMessage));
+    final inferenceWatch = Stopwatch()..start();
+
     final prompt = _buildPrompt(
       userMessage: userMessage,
       history: history,
@@ -230,10 +234,13 @@ class LocalEngine implements AiEngine {
       // run inference in background — does NOT block the UI thread
       final raw  = await Isolate.run(() => _runPrompt(prompt));
       final text = _cleanResponse(raw, resolved.stopSequences ?? []);
+      inferenceWatch.stop();
+      resolved.onEvent?.call(InferenceCompleted(response: text, inferenceTime: inferenceWatch.elapsed));
       _inferenceCompleter!.complete();
       _inferenceCompleter = null;
       return AiResponse(text: text, model: model);
     } catch (e) {
+      resolved.onEvent?.call(InferenceFailed(error: e.toString()));
       _inferenceCompleter!.completeError(e);
       _inferenceCompleter = null;
       rethrow;
@@ -294,6 +301,7 @@ class LocalEngine implements AiEngine {
     if (_initialized) {
       _ffiCleanup?.call();
       _initialized = false;
+      _defaultConfig.onEvent?.call(ModelDisposed());
     }
   }
 
@@ -380,6 +388,9 @@ class LocalEngine implements AiEngine {
         );
       }
 
+      config.onEvent?.call(ModelLoadStarted());
+      final loadWatch = Stopwatch()..start();
+
       // load model in background — does NOT block the UI thread
       final ok = await Isolate.run(
         () => _runInit(_LocalInitArgs(
@@ -405,12 +416,20 @@ class LocalEngine implements AiEngine {
         );
       }
 
+      loadWatch.stop();
       _initialized = true;
       _initCompleter!.complete();
+      config.onEvent?.call(ModelReady(loadTime: loadWatch.elapsed));
     } catch (e) {
-      // reset so a retry is possible after a failure
-      _initCompleter!.completeError(e);
+      config.onEvent?.call(ModelFailed(error: e.toString()));
+      final completer = _initCompleter!;
       _initCompleter = null;
+      // Must call ignore() before completeError — registers a dummy handler so
+      // Dart does not report "unhandled Future error" when no concurrent caller
+      // is awaiting the completer. Callers that ARE waiting have their own
+      // listener already attached and still receive the error normally.
+      completer.future.ignore();
+      completer.completeError(e);
       rethrow;
     }
   }

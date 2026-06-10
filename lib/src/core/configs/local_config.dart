@@ -70,6 +70,7 @@ class LocalConfig extends AiConfig {
     this.seed,
     this.threads,
     this.modelType = LocalModelType.auto,
+    this.onEvent,
   });
 
   /// Path to the .gguf model file on device.
@@ -112,6 +113,12 @@ class LocalConfig extends AiConfig {
   /// Use [LocalModelType.auto] to detect from .gguf metadata.
   final LocalModelType modelType;
 
+
+  /// Called whenever the engine transitions to a new lifecycle state.
+  ///
+  /// See [LocalEngineEvent] for the full list of events and their fields.
+  final void Function(LocalEngineEvent event)? onEvent;
+
   /// Creates a copy with updated fields.
   LocalConfig copyWith({
     String? modelPath,
@@ -126,6 +133,7 @@ class LocalConfig extends AiConfig {
     int? seed,
     int? threads,
     LocalModelType? modelType,
+    void Function(LocalEngineEvent event)? onEvent,
   }) {
     return LocalConfig(
       modelPath: modelPath ?? this.modelPath,
@@ -140,6 +148,7 @@ class LocalConfig extends AiConfig {
       seed: seed ?? this.seed,
       threads: threads ?? this.threads,
       modelType: modelType ?? this.modelType,
+      onEvent: onEvent ?? this.onEvent,
     );
   }
 }

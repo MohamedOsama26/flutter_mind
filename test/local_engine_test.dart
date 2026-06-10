@@ -75,7 +75,6 @@ void main() {
   });
 
   // ─── Stop sequences ───────────────────────────────────────────────────────
-  // These tests are pure Dart — no engine, no device needed.
 
   group('Stop sequences — delimiter format', () {
 
@@ -105,9 +104,7 @@ void main() {
     });
   });
 
-  // ─── _buildPrompt — Dart-side history formatting ──────────────────────────
-  // _buildPrompt concatenates history as plain "role: text" lines.
-  // The chat template (<|im_start|> etc.) is applied later in C++.
+  // ─── _buildPrompt ─────────────────────────────────────────────────────────
 
   group('_buildPrompt', () {
 
@@ -157,7 +154,6 @@ void main() {
       final engine = LocalEngine(
         config: LocalConfig(modelPath: '/model.gguf'),
       );
-      // 10 user + 10 model = 20 messages (indices 0–19)
       final history = List.generate(20, (i) =>
         i.isEven ? ChatMessage.user('msg$i') : ChatMessage.model('msg$i'),
       );
@@ -166,15 +162,12 @@ void main() {
         history: history,
         maxHistoryMessages: 4,
       );
-      // first 16 messages should be dropped
       expect(prompt, isNot(contains('msg0')));
       expect(prompt, isNot(contains('msg15')));
-      // last 4 messages (16–19) should be present
       expect(prompt, contains('msg16'));
       expect(prompt, contains('msg17'));
       expect(prompt, contains('msg18'));
       expect(prompt, contains('msg19'));
-      // current user message always included
       expect(prompt, contains('new message'));
     });
 
@@ -199,6 +192,101 @@ void main() {
         config: LocalConfig(modelPath: '/this/path/does/not/exist.gguf'),
       );
       expect(await engine.isAvailable(), false);
+    });
+  });
+
+  // ─── Events — class fields ────────────────────────────────────────────────
+
+  group('LocalEngineEvent — class fields', () {
+
+    test('ModelReady carries loadTime', () {
+      final event = ModelReady(loadTime: const Duration(seconds: 5));
+      expect(event.loadTime, const Duration(seconds: 5));
+    });
+
+    test('ModelFailed carries error string', () {
+      final event = ModelFailed(error: 'file not found');
+      expect(event.error, 'file not found');
+    });
+
+    test('InferenceStarted carries userMessage', () {
+      final event = InferenceStarted(userMessage: 'hello');
+      expect(event.userMessage, 'hello');
+    });
+
+    test('InferenceCompleted carries response and inferenceTime', () {
+      final event = InferenceCompleted(
+        response: 'Hi there!',
+        inferenceTime: const Duration(milliseconds: 800),
+      );
+      expect(event.response, 'Hi there!');
+      expect(event.inferenceTime, const Duration(milliseconds: 800));
+    });
+
+    test('InferenceFailed carries error string', () {
+      final event = InferenceFailed(error: 'crash');
+      expect(event.error, 'crash');
+    });
+  });
+
+  // ─── Events — switch exhaustiveness ──────────────────────────────────────
+
+  group('LocalEngineEvent — switch exhaustiveness', () {
+
+    test('switch covers all event types without default', () {
+      // compile-time check — if a new event type is added, the compiler warns
+      String label(LocalEngineEvent e) => switch (e) {
+        ModelLoadStarted()   => 'load-started',
+        ModelReady()         => 'ready',
+        ModelFailed()        => 'load-failed',
+        InferenceStarted()   => 'inference-started',
+        InferenceCompleted() => 'inference-completed',
+        InferenceFailed()    => 'inference-failed',
+        ContextCleared()     => 'context-cleared',
+        ModelDisposed()      => 'disposed',
+      };
+
+      expect(label(ModelLoadStarted()),                                             'load-started');
+      expect(label(ModelReady(loadTime: Duration.zero)),                            'ready');
+      expect(label(ModelFailed(error: '')),                                         'load-failed');
+      expect(label(InferenceStarted(userMessage: '')),                              'inference-started');
+      expect(label(InferenceCompleted(response: '', inferenceTime: Duration.zero)), 'inference-completed');
+      expect(label(InferenceFailed(error: '')),                                     'inference-failed');
+      expect(label(ContextCleared()),                                               'context-cleared');
+      expect(label(ModelDisposed()),                                                'disposed');
+    });
+  });
+
+  // ─── Events — onEvent fires ───────────────────────────────────────────────
+
+  group('LocalEngineEvent — onEvent fires', () {
+
+    test('ModelFailed fires when send() fails for any reason', () async {
+      LocalEngineEvent? captured;
+      final engine = LocalEngine(
+        config: LocalConfig(
+          modelPath: '/does/not/exist.gguf',
+          onEvent: (e) => captured = e,
+        ),
+      );
+
+      try {
+        await engine.send(userMessage: 'hello');
+      } catch (_) {}
+
+      expect(captured, isA<ModelFailed>());
+      expect((captured as ModelFailed).error, isNotEmpty);
+    });
+
+    test('onEvent null does not crash when send() fails', () async {
+      final engine = LocalEngine(
+        config: LocalConfig(modelPath: '/does/not/exist.gguf'),
+      );
+
+      await expectLater(
+        engine.send(userMessage: 'hello'),
+        throwsA(anything),
+      );
     });
   });
 }

@@ -21,6 +21,7 @@ export 'src/core/parser/response_tone.dart';
 export 'src/core/parser/stop_signal_mode.dart';
 export 'src/core/parser/ai_preset.dart';
 export 'src/core/parser/message_analyzer.dart';
+export 'src/core/events/local_engine_event.dart';
 
 import 'package:flutter_mind/src/core/configs/ai_config.dart';
 import 'package:flutter_mind/src/core/engines/ai_engine.dart';
