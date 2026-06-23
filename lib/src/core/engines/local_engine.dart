@@ -11,8 +11,7 @@ import 'package:flutter_mind/src/core/models/ai_model.dart';
 import 'package:flutter_mind/src/core/models/chat_message.dart';
 import 'package:flutter_mind/src/ai_response.dart';
 
-// ─── FFI type definitions ───────────────────────────────────────────────────
-
+// FFI type definitions 
 typedef _InitParamsC = Int32 Function(
   Pointer<Utf8> modelPath,
   Pointer<Utf8> systemPrompt,
@@ -48,7 +47,7 @@ typedef _PromptDart = Pointer<Utf8> Function(Pointer<Utf8> prompt);
 typedef _CleanupC    = Void Function();
 typedef _CleanupDart = void Function();
 
-// ─── Isolate helpers ────────────────────────────────────────────────────────
+// Isolate helpers
 //
 // Isolate.run() can only call TOP-LEVEL functions — not class methods or
 // lambdas that capture `this`. Everything below must live outside the class.
@@ -138,8 +137,25 @@ String _runPrompt(String prompt) {
   return text;
 }
 
-// ─── Engine ─────────────────────────────────────────────────────────────────
-
+// Engine 
+/// **Deprecated.** This class has moved to `package:flutter_mind_local`.
+///
+/// Migration:
+/// ```yaml
+/// # pubspec.yaml
+/// dependencies:
+///   flutter_mind_local: ^0.1.0   # replaces LocalEngine from flutter_mind
+/// ```
+/// ```dart
+/// // Before
+/// import 'package:flutter_mind/flutter_mind.dart';
+///
+/// // After — re-exports all base types, no other imports needed
+/// import 'package:flutter_mind_local/flutter_mind_local.dart';
+/// ```
+///
+/// ---
+///
 /// AI engine for local on-device models via llama.cpp.
 ///
 /// Runs entirely offline — no API key, no internet required.
@@ -174,6 +190,13 @@ String _runPrompt(String prompt) {
 /// ```
 ///
 /// Always call [dispose] when done to free model memory.
+@Deprecated(
+  'LocalEngine has moved to package:flutter_mind_local. '
+  'Add flutter_mind_local to your pubspec.yaml and replace this import with '
+  '`package:flutter_mind_local/flutter_mind_local.dart` — '
+  'it re-exports all base types (AiEngine, AiConfig, AiResponse) so no other imports are needed. '
+  'This will be removed in flutter_mind v1.0.0.',
+)
 class LocalEngine implements AiEngine {
   /// Creates a LocalEngine.
   ///
@@ -198,7 +221,7 @@ class LocalEngine implements AiEngine {
   // guards against concurrent inference — llama_decode crashes if called from two isolates simultaneously
   Completer<void>? _inferenceCompleter;
 
-  // ─── AiEngine interface ───────────────────────────────────────────────────
+  // AiEngine interface
 
   @override
   AiModel get model => CustomModel(_defaultConfig.modelPath.split('/').last);
@@ -305,8 +328,7 @@ class LocalEngine implements AiEngine {
     }
   }
 
-  // ─── Response cleaning ────────────────────────────────────────────────────
-
+  // Response cleaning
   /// Cuts the response at the first stop sequence found.
   ///
   /// Dart-side safety net for tokens C++ missed. Uses substring not replaceAll
@@ -337,7 +359,7 @@ class LocalEngine implements AiEngine {
     return result.trim();
   }
 
-  // ─── Test helpers ─────────────────────────────────────────────────────────
+  // Test helpers
   // These expose internals for unit tests only — do not use in production code.
 
   /// Exposes the resolved default config for unit tests.
@@ -357,7 +379,7 @@ class LocalEngine implements AiEngine {
         maxHistoryMessages: maxHistoryMessages,
       );
 
-  // ─── Private helpers ──────────────────────────────────────────────────────
+  // Private helpers 
 
   /// Initializes the model on first call.
   ///

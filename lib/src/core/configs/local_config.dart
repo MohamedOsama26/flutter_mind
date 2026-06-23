@@ -1,5 +1,23 @@
 part of 'ai_config.dart';
 
+/// **Deprecated.** This class has moved to `package:flutter_mind_local`.
+///
+/// Migration:
+/// ```yaml
+/// # pubspec.yaml
+/// dependencies:
+///   flutter_mind_local: ^0.1.0
+/// ```
+/// ```dart
+/// // Before
+/// import 'package:flutter_mind/flutter_mind.dart';
+///
+/// // After — re-exports all base types, no other imports needed
+/// import 'package:flutter_mind_local/flutter_mind_local.dart';
+/// ```
+///
+/// ---
+///
 /// Configuration for local on-device AI models.
 ///
 /// Runs entirely offline using llama.cpp engine.
@@ -39,6 +57,13 @@ part of 'ai_config.dart';
 /// | [topK]            | Creativity control (advanced)           | ❌ Leave default     |
 /// | [threads]         | CPU threads for inference               | ❌ Leave default     |
 /// | [seed]            | Reproducible output for testing         | ❌ Testing only      |
+@Deprecated(
+  'LocalConfig has moved to package:flutter_mind_local. '
+  'Add flutter_mind_local to your pubspec.yaml and replace this import with '
+  '`package:flutter_mind_local/flutter_mind_local.dart` — '
+  'it re-exports all base types (AiEngine, AiConfig, AiResponse) so no other imports are needed. '
+  'This will be removed in flutter_mind v1.0.0.',
+)
 class LocalConfig extends AiConfig {
   /// Creates a local model configuration.
   ///
@@ -154,6 +179,12 @@ class LocalConfig extends AiConfig {
 }
 
 /// Chat template format for local models.
+@Deprecated(
+  'LocalModelType has moved to package:flutter_mind_local. '
+  'Add flutter_mind_local to your pubspec.yaml and replace this import with '
+  '`package:flutter_mind_local/flutter_mind_local.dart`. '
+  'This will be removed in flutter_mind v1.0.0.',
+)
 enum LocalModelType {
   /// Auto-detect from .gguf metadata (recommended)
   auto,
