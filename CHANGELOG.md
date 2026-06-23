@@ -1,3 +1,42 @@
+## 0.3.0
+
+### Deprecated
+
+- **`LocalEngine`, `LocalConfig`, `LocalEngineEvent`** are deprecated and will be removed in v1.0.0.
+  They are moving to [`flutter_mind_local`](https://pub.dev/packages/flutter_mind_local) — a dedicated
+  package that re-exports all base types so only one import is needed.
+
+  Migration:
+  ```yaml
+  dependencies:
+    flutter_mind_local: ^0.1.0
+  ```
+  ```dart
+  // Before
+  import 'package:flutter_mind/flutter_mind.dart';
+
+  // After
+  import 'package:flutter_mind_local/flutter_mind_local.dart';
+  ```
+
+### New
+
+- **`LocalEngineEvent`** — sealed class with 8 event types covering the full model lifecycle:
+  `ModelLoadStarted`, `ModelReady` (with `loadTime`), `ModelFailed` (with `error`),
+  `InferenceStarted` (with `userMessage`), `InferenceCompleted` (with `response` and `inferenceTime`),
+  `InferenceFailed` (with `error`), `ContextCleared`, `ModelDisposed`.
+- **`LocalConfig.onEvent`** — callback that fires these events so callers can react to loading,
+  inference, and failure without polling.
+
+### Fixed
+
+- **Unhandled Future error in `_ensureInitialized`** — when the native library failed to load
+  and no concurrent caller was awaiting the `Completer`, Dart reported an unhandled Future error
+  even though the caller's `try/catch` already handled the rethrown exception. Fixed by calling
+  `completer.future.ignore()` before `completeError` to suppress the redundant unhandled error.
+
+---
+
 ## 0.2.1
 
 ### Fixed
