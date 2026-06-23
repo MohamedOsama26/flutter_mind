@@ -30,7 +30,7 @@ part 'local_config.dart';
 ///   ),
 /// );
 /// ```
-sealed class AiConfig {
+abstract class AiConfig {
   const AiConfig({
     this.model,
     this.systemPrompt,
