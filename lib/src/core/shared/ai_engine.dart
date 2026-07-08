@@ -1,7 +1,7 @@
-import 'package:flutter_mind/src/core/configs/ai_config.dart';
-import 'package:flutter_mind/src/core/models/ai_model.dart';
-import 'package:flutter_mind/src/core/models/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/ai_config.dart';
+import 'package:flutter_mind/src/core/shared/ai_model.dart';
 import 'package:flutter_mind/src/ai_response.dart';
+import 'package:flutter_mind/src/core/shared/chat_message.dart';
 
 /// Contract that every AI engine must implement.
 ///
@@ -57,7 +57,7 @@ import 'package:flutter_mind/src/ai_response.dart';
 ///   void dispose() {}
 /// }
 /// ```
-abstract interface class AiEngine {
+abstract class AiEngine {
   /// The model this engine uses by default.
   ///
   /// Set at construction time via the engine's config.
@@ -194,4 +194,9 @@ abstract interface class AiEngine {
   /// }
   /// ```
   void dispose();
+
+
+  Future<List<Map<String, dynamic>>> getModels() => throw UnimplementedError(
+  'getModels() is not supported by this engine.',
+);
 }

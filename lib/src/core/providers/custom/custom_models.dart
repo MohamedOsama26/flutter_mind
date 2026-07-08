@@ -1,4 +1,4 @@
-part of 'ai_model.dart';
+part of '../../shared/ai_model.dart';
 
 /// A custom model identified by a raw string.
 ///

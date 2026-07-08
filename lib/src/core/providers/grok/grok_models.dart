@@ -1,0 +1,1 @@
+part of '../../shared/ai_model.dart';

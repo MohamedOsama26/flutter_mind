@@ -3,48 +3,50 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:ffi/ffi.dart';
-import 'package:flutter_mind/src/core/configs/ai_config.dart';
-import 'package:flutter_mind/src/core/events/local_engine_event.dart';
-import 'package:flutter_mind/src/core/engines/ai_engine.dart';
+import 'package:flutter_mind/src/core/shared/ai_config.dart';
+import 'package:flutter_mind/src/core/providers/local/local_engine_event.dart';
+import 'package:flutter_mind/src/core/shared/ai_engine.dart';
 import 'package:flutter_mind/src/core/exceptions/flutter_mind_exception.dart';
-import 'package:flutter_mind/src/core/models/ai_model.dart';
-import 'package:flutter_mind/src/core/models/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/ai_model.dart';
 import 'package:flutter_mind/src/ai_response.dart';
+import 'package:flutter_mind/src/core/shared/chat_message.dart';
 
-// FFI type definitions 
-typedef _InitParamsC = Int32 Function(
-  Pointer<Utf8> modelPath,
-  Pointer<Utf8> systemPrompt,
-  Pointer<Utf8> stopSequences,
-  Float temperature,
-  Int32 maxTokens,
-  Int32 contextSize,
-  Float repeatPenalty,
-  Float topP,
-  Int32 topK,
-  Int32 seed,
-  Int32 threadCount,
-  Int32 modelType,
-);
-typedef _InitParamsDart = int Function(
-  Pointer<Utf8> modelPath,
-  Pointer<Utf8> systemPrompt,
-  Pointer<Utf8> stopSequences,
-  double temperature,
-  int maxTokens,
-  int contextSize,
-  double repeatPenalty,
-  double topP,
-  int topK,
-  int seed,
-  int threadCount,
-  int modelType,
-);
+// FFI type definitions
+typedef _InitParamsC =
+    Int32 Function(
+      Pointer<Utf8> modelPath,
+      Pointer<Utf8> systemPrompt,
+      Pointer<Utf8> stopSequences,
+      Float temperature,
+      Int32 maxTokens,
+      Int32 contextSize,
+      Float repeatPenalty,
+      Float topP,
+      Int32 topK,
+      Int32 seed,
+      Int32 threadCount,
+      Int32 modelType,
+    );
+typedef _InitParamsDart =
+    int Function(
+      Pointer<Utf8> modelPath,
+      Pointer<Utf8> systemPrompt,
+      Pointer<Utf8> stopSequences,
+      double temperature,
+      int maxTokens,
+      int contextSize,
+      double repeatPenalty,
+      double topP,
+      int topK,
+      int seed,
+      int threadCount,
+      int modelType,
+    );
 
-typedef _PromptC    = Pointer<Utf8> Function(Pointer<Utf8> prompt);
+typedef _PromptC = Pointer<Utf8> Function(Pointer<Utf8> prompt);
 typedef _PromptDart = Pointer<Utf8> Function(Pointer<Utf8> prompt);
 
-typedef _CleanupC    = Void Function();
+typedef _CleanupC = Void Function();
 typedef _CleanupDart = void Function();
 
 // Isolate helpers
@@ -59,7 +61,8 @@ typedef _CleanupDart = void Function();
 class _LocalInitArgs {
   final String modelPath;
   final String systemPrompt;
-  final String stopSequences; // \x1F-delimited e.g. "<|im_end|>\x1F<|im_start|>"
+  final String
+  stopSequences; // \x1F-delimited e.g. "<|im_end|>\x1F<|im_start|>"
   final double temperature;
   final int maxTokens;
   final int contextSize;
@@ -109,13 +112,21 @@ bool _runInit(_LocalInitArgs a) {
     'local_model_init_params',
   );
   final pathPtr = a.modelPath.toNativeUtf8();
-  final sysPtr  = a.systemPrompt.toNativeUtf8();
+  final sysPtr = a.systemPrompt.toNativeUtf8();
   final stopPtr = a.stopSequences.toNativeUtf8();
-  final result  = fn(
-    pathPtr, sysPtr, stopPtr,
-    a.temperature, a.maxTokens, a.contextSize,
-    a.repeatPenalty, a.topP, a.topK,
-    a.seed, a.threads, a.modelType,
+  final result = fn(
+    pathPtr,
+    sysPtr,
+    stopPtr,
+    a.temperature,
+    a.maxTokens,
+    a.contextSize,
+    a.repeatPenalty,
+    a.topP,
+    a.topK,
+    a.seed,
+    a.threads,
+    a.modelType,
   );
   calloc.free(pathPtr);
   calloc.free(sysPtr);
@@ -130,14 +141,14 @@ bool _runInit(_LocalInitArgs a) {
 String _runPrompt(String prompt) {
   final lib = _openLib();
   final fn = lib.lookupFunction<_PromptC, _PromptDart>('local_model_prompt');
-  final ptr    = prompt.toNativeUtf8();
+  final ptr = prompt.toNativeUtf8();
   final result = fn(ptr);
-  final text   = result == nullptr ? '' : result.toDartString().trim();
+  final text = result == nullptr ? '' : result.toDartString().trim();
   calloc.free(ptr);
   return text;
 }
 
-// Engine 
+// Engine
 /// **Deprecated.** This class has moved to `package:flutter_mind_local`.
 ///
 /// Migration:
@@ -197,15 +208,14 @@ String _runPrompt(String prompt) {
   'it re-exports all base types (AiEngine, AiConfig, AiResponse) so no other imports are needed. '
   'This will be removed in flutter_mind v1.0.0.',
 )
-class LocalEngine implements AiEngine {
+class LocalEngine extends AiEngine {
   /// Creates a LocalEngine.
   ///
   /// [config] is required — must include [LocalConfig.modelPath].
   ///
   /// The model is loaded lazily on the first [send] or [stream] call.
-  LocalEngine({
-    required LocalConfig config,
-  })  : _defaultConfig = _resolveSmartDefaults(config) {
+  LocalEngine({required LocalConfig config})
+    : _defaultConfig = _resolveSmartDefaults(config) {
     validate();
   }
 
@@ -255,10 +265,15 @@ class LocalEngine implements AiEngine {
 
     try {
       // run inference in background — does NOT block the UI thread
-      final raw  = await Isolate.run(() => _runPrompt(prompt));
+      final raw = await Isolate.run(() => _runPrompt(prompt));
       final text = _cleanResponse(raw, resolved.stopSequences ?? []);
       inferenceWatch.stop();
-      resolved.onEvent?.call(InferenceCompleted(response: text, inferenceTime: inferenceWatch.elapsed));
+      resolved.onEvent?.call(
+        InferenceCompleted(
+          response: text,
+          inferenceTime: inferenceWatch.elapsed,
+        ),
+      );
       _inferenceCompleter!.complete();
       _inferenceCompleter = null;
       return AiResponse(text: text, model: model);
@@ -372,14 +387,13 @@ class LocalEngine implements AiEngine {
     required String userMessage,
     List<ChatMessage>? history,
     int maxHistoryMessages = 20,
-  }) =>
-      _buildPrompt(
-        userMessage: userMessage,
-        history: history,
-        maxHistoryMessages: maxHistoryMessages,
-      );
+  }) => _buildPrompt(
+    userMessage: userMessage,
+    history: history,
+    maxHistoryMessages: maxHistoryMessages,
+  );
 
-  // Private helpers 
+  // Private helpers
 
   /// Initializes the model on first call.
   ///
@@ -401,7 +415,9 @@ class LocalEngine implements AiEngine {
     try {
       // bind cleanup on main thread — dispose() calls it directly
       final lib = _loadLibrary();
-      _ffiCleanup = lib.lookupFunction<_CleanupC, _CleanupDart>('local_model_cleanup');
+      _ffiCleanup = lib.lookupFunction<_CleanupC, _CleanupDart>(
+        'local_model_cleanup',
+      );
 
       if (!await isAvailable()) {
         throw EngineException(
@@ -415,20 +431,22 @@ class LocalEngine implements AiEngine {
 
       // load model in background — does NOT block the UI thread
       final ok = await Isolate.run(
-        () => _runInit(_LocalInitArgs(
-          modelPath:     config.modelPath,
-          systemPrompt:  config.systemPrompt?.build(userMessage: '') ?? '',
-          stopSequences: (config.stopSequences ?? []).join('\x1F'),
-          temperature:   config.temperature ?? 0.7,
-          maxTokens:     config.maxOutputTokens ?? 512,
-          contextSize:   config.contextSize ?? 2048,
-          repeatPenalty: config.repeatPenalty ?? 1.1,
-          topP:          config.topP ?? 0.9,
-          topK:          config.topK ?? 40,
-          seed:          config.seed ?? -1,
-          threads:       config.threads ?? 4,
-          modelType:     config.modelType.index,
-        )),
+        () => _runInit(
+          _LocalInitArgs(
+            modelPath: config.modelPath,
+            systemPrompt: config.systemPrompt?.build(userMessage: '') ?? '',
+            stopSequences: (config.stopSequences ?? []).join('\x1F'),
+            temperature: config.temperature ?? 0.7,
+            maxTokens: config.maxOutputTokens ?? 512,
+            contextSize: config.contextSize ?? 2048,
+            repeatPenalty: config.repeatPenalty ?? 1.1,
+            topP: config.topP ?? 0.9,
+            topK: config.topK ?? 40,
+            seed: config.seed ?? -1,
+            threads: config.threads ?? 4,
+            modelType: config.modelType.index,
+          ),
+        ),
       );
 
       if (!ok) {
@@ -470,9 +488,7 @@ class LocalEngine implements AiEngine {
     if (Platform.isMacOS) {
       return DynamicLibrary.open('liblocal_model.dylib');
     }
-    throw const EngineException(
-      'LocalEngine: platform not supported yet.',
-    );
+    throw const EngineException('LocalEngine: platform not supported yet.');
   }
 
   /// Builds a conversation-aware prompt string.
@@ -510,31 +526,33 @@ class LocalEngine implements AiEngine {
       );
     }
     return _defaultConfig.copyWith(
-      modelPath:      override.modelPath,
-      systemPrompt:   override.systemPrompt,
-      temperature:    override.temperature,
+      modelPath: override.modelPath,
+      systemPrompt: override.systemPrompt,
+      temperature: override.temperature,
       maxOutputTokens: override.maxOutputTokens,
-      stopSequences:  override.stopSequences,
-      topP:           override.topP,
-      topK:           override.topK,
-      contextSize:    override.contextSize,
-      repeatPenalty:  override.repeatPenalty,
-      seed:           override.seed,
-      threads:        override.threads,
-      modelType:      override.modelType,
+      stopSequences: override.stopSequences,
+      topP: override.topP,
+      topK: override.topK,
+      contextSize: override.contextSize,
+      repeatPenalty: override.repeatPenalty,
+      seed: override.seed,
+      threads: override.threads,
+      modelType: override.modelType,
     );
   }
 
   /// Applies smart defaults based on config.
   static LocalConfig _resolveSmartDefaults(LocalConfig config) {
     return config.copyWith(
-      temperature:   config.temperature   ?? 0.7,
+      temperature: config.temperature ?? 0.7,
       maxOutputTokens: config.maxOutputTokens ?? 512,
-      contextSize:   config.contextSize   ?? 2048,
+      contextSize: config.contextSize ?? 2048,
       repeatPenalty: config.repeatPenalty ?? 1.1,
-      topP:          config.topP          ?? 0.9,
-      topK:          config.topK          ?? 40,
-      threads:       config.threads       ?? 4,
+      topP: config.topP ?? 0.9,
+      topK: config.topK ?? 40,
+      threads: config.threads ?? 4,
     );
   }
+
+
 }

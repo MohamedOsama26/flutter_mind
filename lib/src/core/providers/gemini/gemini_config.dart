@@ -1,4 +1,4 @@
-part of 'ai_config.dart';
+part of '../../shared/ai_config.dart';
 
 /// Configuration for Google Gemini text generation requests.
 ///

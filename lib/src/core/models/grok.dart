@@ -1,1 +1,0 @@
-part of 'ai_model.dart';

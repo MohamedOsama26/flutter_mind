@@ -1,4 +1,4 @@
-part of 'ai_config.dart';
+part of '../../shared/ai_config.dart';
 
 /// **Deprecated.** This class has moved to `package:flutter_mind_local`.
 ///

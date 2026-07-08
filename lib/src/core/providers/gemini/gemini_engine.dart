@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_mind/src/core/configs/ai_config.dart';
-import 'package:flutter_mind/src/core/configs/retry_config.dart';
-import 'package:flutter_mind/src/core/engines/ai_engine.dart';
+import 'package:flutter_mind/src/core/shared/ai_config.dart';
+import 'package:flutter_mind/src/core/shared/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/retry_config.dart';
+import 'package:flutter_mind/src/core/shared/ai_engine.dart';
 import 'package:flutter_mind/src/core/exceptions/flutter_mind_exception.dart';
-import 'package:flutter_mind/src/core/models/ai_model.dart';
-import 'package:flutter_mind/src/core/models/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/ai_model.dart';
 import 'package:flutter_mind/src/ai_request.dart';
 import 'package:flutter_mind/src/ai_response.dart';
 
@@ -79,20 +79,19 @@ class GeminiEngine implements AiEngine {
     GeminiConfig? config,
     Duration timeout = const Duration(seconds: 30),
     RetryConfig retry = const RetryConfig(),
-  })  : _apiKey = apiKey,
-        _timeout = timeout,
-        _retry = retry,
-        _defaultConfig = _resolveSmartDefaults(config),
-        _dio = Dio(
-          BaseOptions(
-            baseUrl:
-                'https://generativelanguage.googleapis.com/v1beta/models/',
-            queryParameters: {'key': apiKey},
-            headers: {'Content-Type': 'application/json'},
-            sendTimeout: timeout,
-            receiveTimeout: timeout,
-          ),
-        ) {
+  }) : _apiKey = apiKey,
+       _timeout = timeout,
+       _retry = retry,
+       _defaultConfig = _resolveSmartDefaults(config),
+       _dio = Dio(
+         BaseOptions(
+           baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/',
+           queryParameters: {'key': apiKey},
+           headers: {'Content-Type': 'application/json'},
+           sendTimeout: timeout,
+           receiveTimeout: timeout,
+         ),
+       ) {
     validate();
   }
 
@@ -102,7 +101,6 @@ class GeminiEngine implements AiEngine {
   final GeminiConfig _defaultConfig;
   final Dio _dio;
 
-  
   /// The model this engine uses by default.
   ///
   /// Set via [config] in the constructor. Falls back to [GeminiModel.flash25]
@@ -232,7 +230,8 @@ class GeminiEngine implements AiEngine {
       return response.data['totalTokens'] as int? ?? 0;
     } catch (_) {
       // Fallback — rough estimate: 1 token ≈ 4 characters
-      final systemLength = resolved.systemPrompt?.build(userMessage: userMessage).length ?? 0;
+      final systemLength =
+          resolved.systemPrompt?.build(userMessage: userMessage).length ?? 0;
       return ((userMessage.length + systemLength) / 4).ceil();
     }
   }
@@ -282,7 +281,6 @@ class GeminiEngine implements AiEngine {
   @override
   void dispose() => _dio.close();
 
-
   /// Merges a per-call config override with the stored default config.
   ///
   /// Only fields explicitly set in [override] replace the defaults.
@@ -319,10 +317,7 @@ class GeminiEngine implements AiEngine {
   static GeminiConfig _resolveSmartDefaults(GeminiConfig? config) {
     // Developer set nothing — use best defaults for general use
     if (config == null) {
-      return const GeminiConfig(
-        model: GeminiModel.flash25,
-        temperature: 0.7,
-      );
+      return const GeminiConfig(model: GeminiModel.flash25, temperature: 0.7);
     }
 
     final model = config.model;
@@ -337,13 +332,13 @@ class GeminiEngine implements AiEngine {
       systemPrompt: config.systemPrompt,
 
       // Temperature — smart default based on use case
-      temperature: config.temperature ??
+      temperature:
+          config.temperature ??
           (hasThinking
               ? 0.3 // thinking models work better with lower temp
               : hasStructuredOutput
-                  ? 0.1 // structured output needs deterministic responses
-                  : 0.7), // general use
-
+              ? 0.1 // structured output needs deterministic responses
+              : 0.7), // general use
       // Rest — keep as is
       maxOutputTokens: config.maxOutputTokens,
       stopSequences: config.stopSequences,
@@ -367,7 +362,8 @@ class GeminiEngine implements AiEngine {
       try {
         return await _sendRequest(request);
       } on EngineException catch (e) {
-        final shouldRetry = e.statusCode != null &&
+        final shouldRetry =
+            e.statusCode != null &&
             _retry.shouldRetry(e.statusCode!) &&
             attempt < _retry.maxAttempts;
 
@@ -449,21 +445,21 @@ class GeminiEngine implements AiEngine {
     final trimmed = history == null || history.isEmpty
         ? const <ChatMessage>[]
         : history.length > maxHistoryMessages
-            ? history.sublist(history.length - maxHistoryMessages)
-            : history;
+        ? history.sublist(history.length - maxHistoryMessages)
+        : history;
 
     final contents = [
       for (final msg in trimmed)
         {
           'role': msg.role,
           'parts': [
-            {'text': msg.text}
+            {'text': msg.text},
           ],
         },
       {
         'role': 'user',
         'parts': [
-          {'text': userMessage}
+          {'text': userMessage},
         ],
       },
     ];
@@ -474,7 +470,7 @@ class GeminiEngine implements AiEngine {
     if (config.systemPrompt != null) {
       body['systemInstruction'] = {
         'parts': [
-          {'text': config.systemPrompt!.build(userMessage: userMessage)}
+          {'text': config.systemPrompt!.build(userMessage: userMessage)},
         ],
       };
     }
@@ -523,10 +519,7 @@ class GeminiEngine implements AiEngine {
   }
 
   /// Parses a full generateContent response into [AiResponse].
-  AiResponse _parseResponse(
-    Map<String, dynamic> json,
-    AiModel model,
-  ) {
+  AiResponse _parseResponse(Map<String, dynamic> json, AiModel model) {
     final candidates = json['candidates'] as List<dynamic>?;
     if (candidates == null || candidates.isEmpty) {
       throw const EngineException('GeminiEngine: response has no candidates.');
@@ -574,8 +567,9 @@ class GeminiEngine implements AiEngine {
     try {
       final candidates = json['candidates'] as List<dynamic>?;
       if (candidates == null || candidates.isEmpty) return null;
-      final parts = (candidates.first as Map<String, dynamic>)['content']
-          ?['parts'] as List<dynamic>?;
+      final parts =
+          (candidates.first as Map<String, dynamic>)['content']?['parts']
+              as List<dynamic>?;
       if (parts == null || parts.isEmpty) return null;
       return (parts.first as Map<String, dynamic>)['text'] as String?;
     } catch (_) {
@@ -607,48 +601,65 @@ class GeminiEngine implements AiEngine {
 
     return switch (statusCode) {
       400 => EngineException(
-          'GeminiEngine: bad request — ${raw ?? 'no details from server'}',
-          statusCode: 400,
-          raw: raw,
-        ),
+        'GeminiEngine: bad request — ${raw ?? 'no details from server'}',
+        statusCode: 400,
+        raw: raw,
+      ),
       401 => EngineException(
-          'GeminiEngine: invalid API key. '
-          'Check your key at https://aistudio.google.com/apikey',
-          statusCode: 401,
-          raw: raw,
-        ),
+        'GeminiEngine: invalid API key. '
+        'Check your key at https://aistudio.google.com/apikey',
+        statusCode: 401,
+        raw: raw,
+      ),
       403 => EngineException(
-          'GeminiEngine: API key does not have permission for this model.',
-          statusCode: 403,
-          raw: raw,
-        ),
+        'GeminiEngine: API key does not have permission for this model.',
+        statusCode: 403,
+        raw: raw,
+      ),
       404 => EngineException(
-          'GeminiEngine: model not found — "${_defaultConfig.model!.value}". '
-          'Check the model name or use a CustomModel string.',
-          statusCode: 404,
-          raw: raw,
-        ),
+        'GeminiEngine: model not found — "${_defaultConfig.model!.value}". '
+        'Check the model name or use a CustomModel string.',
+        statusCode: 404,
+        raw: raw,
+      ),
       429 => EngineException(
-          'GeminiEngine: rate limit exceeded. '
-          'Consider adding a RetryConfig or upgrading your API plan.',
-          statusCode: 429,
-          raw: raw,
-        ),
+        'GeminiEngine: rate limit exceeded. '
+        'Consider adding a RetryConfig or upgrading your API plan.',
+        statusCode: 429,
+        raw: raw,
+      ),
       500 => EngineException(
-          'GeminiEngine: Gemini server error. Try again shortly.',
-          statusCode: 500,
-          raw: raw,
-        ),
+        'GeminiEngine: Gemini server error. Try again shortly.',
+        statusCode: 500,
+        raw: raw,
+      ),
       503 => EngineException(
-          'GeminiEngine: Gemini service temporarily unavailable.',
-          statusCode: 503,
-          raw: raw,
-        ),
+        'GeminiEngine: Gemini service temporarily unavailable.',
+        statusCode: 503,
+        raw: raw,
+      ),
       _ => EngineException(
-          'GeminiEngine: unexpected error — ${e.message}',
-          statusCode: statusCode,
-          raw: raw,
-        ),
+        'GeminiEngine: unexpected error — ${e.message}',
+        statusCode: statusCode,
+        raw: raw,
+      ),
     };
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getModels() async {
+    try {
+      final data = await _dio.get(
+        'https://api.openai.com/v1/models',
+        options: Options(headers: {'Authorization': 'Bearer $_apiKey'}),
+      );
+      final models = data.data['data'] as List<dynamic>;
+      return models.map((model) => model as Map<String, dynamic>).toList();
+    } catch (error) {
+      throw EngineException(
+        'GeminiEngine: failed to fetch models — ${error.toString()}',
+        raw: error.toString(),
+      );
+    }
   }
 }

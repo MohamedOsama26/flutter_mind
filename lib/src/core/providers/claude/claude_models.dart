@@ -1,4 +1,4 @@
-part of 'ai_model.dart';
+part of '../../shared/ai_model.dart';
 
 
 /// Known Anthropic Claude models.

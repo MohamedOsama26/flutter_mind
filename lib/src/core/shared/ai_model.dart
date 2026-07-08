@@ -1,13 +1,13 @@
-import 'package:flutter_mind/src/core/models/capability.dart';
+import 'package:flutter_mind/src/core/shared/capability.dart';
 
-part 'gemini.dart';
-part 'open_ai.dart';
-part 'claude.dart';
-part 'custom.dart';
-part 'deep_seek.dart';
-part 'grok.dart';
-part 'minimax.dart';
-part 'local.dart';
+part '../providers/gemini/gemini_models.dart';
+part '../providers/open_ai/open_ai_models.dart';
+part '../providers/claude/claude_models.dart';
+part '../providers/custom/custom_models.dart';
+part '../providers/deep_seek/deep_seek_models.dart';
+part '../providers/grok/grok_models.dart';
+part '../providers/minimax/minimax_models.dart';
+part '../providers/local/local_models.dart';
 
 
 /// Base sealed class for all AI models.

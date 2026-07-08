@@ -1,14 +1,13 @@
-import 'package:flutter_mind/src/core/events/local_engine_event.dart';
-import 'package:flutter_mind/src/core/models/ai_model.dart';
-import 'package:flutter_mind/src/core/models/capability.dart';
-import 'package:flutter_mind/src/core/models/thinking_budget.dart';
+import 'package:flutter_mind/src/core/providers/local/local_engine_event.dart';
+import 'package:flutter_mind/src/core/shared/ai_model.dart';
+import 'package:flutter_mind/src/core/shared/thinking_budget.dart';
 import 'package:flutter_mind/src/core/parser/prompt_config.dart';
 
-part 'gemini_config.dart';
-part 'open_ai_config.dart';
-part 'claude_config.dart';
-part 'custom_config.dart';
-part 'local_config.dart';
+part '../providers/gemini/gemini_config.dart';
+part '../providers/open_ai/open_ai_config.dart';
+part '../providers/claude/claude_config.dart';
+part '../providers/custom/custom_config.dart';
+part '../providers/local/local_config.dart';
 
 /// Base configuration for all AI generation requests in flutter_mind.
 ///
