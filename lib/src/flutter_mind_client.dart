@@ -1,7 +1,7 @@
-import 'package:flutter_mind/src/core/configs/ai_config.dart';
-import 'package:flutter_mind/src/core/engines/ai_engine.dart';
-import 'package:flutter_mind/src/core/models/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/ai_config.dart';
+import 'package:flutter_mind/src/core/shared/ai_engine.dart';
 import 'package:flutter_mind/src/ai_response.dart';
+import 'package:flutter_mind/src/core/shared/chat_message.dart';
 import 'package:flutter_mind/src/core/validators/input_validator.dart';
 
 /// A function that enriches the user message before it is sent to the engine.

@@ -1,5 +1,5 @@
-import 'package:flutter_mind/src/core/configs/ai_config.dart';
-import 'package:flutter_mind/src/core/models/chat_message.dart';
+import 'package:flutter_mind/src/core/shared/ai_config.dart';
+import 'package:flutter_mind/src/core/shared/chat_message.dart';
 
 /// Represents a single request sent to an AI engine.
 ///

@@ -1,4 +1,4 @@
-import 'package:flutter_mind/src/core/models/ai_model.dart';
+import 'package:flutter_mind/src/core/shared/ai_model.dart';
 
 /// Represents the response returned from an AI engine.
 ///
