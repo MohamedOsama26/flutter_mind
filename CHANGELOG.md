@@ -1,3 +1,38 @@
+## 0.4.0
+
+### New — OpenAI engine via the Responses API
+
+Full OpenAI support using the [Responses API](https://platform.openai.com/docs/api-reference/responses)
+(`POST /v1/responses`) — OpenAI's latest generation text API.
+
+**New classes:**
+- `OpenAiEngine` — implements `AiEngine` for OpenAI GPT-5 models. Same `send`, `stream`,
+  `countTokens`, `getModels`, `isAvailable`, `dispose` interface as `GeminiEngine`.
+- `OpenAiConfig` — configuration for `OpenAiEngine`. Supports `model`, `systemPrompt`,
+  `temperature`, `maxOutputTokens`, `stopSequences`, `topP`, `reasoningEffort`,
+  `responseFormat`, `topLogprobs`, `parallelToolCalls`, `seed`.
+- `OpenAiModel` — model constants: `gpt55`, `gpt54`, `gpt54Mini` (default), `gpt54Nano`.
+  Deprecated stubs retained: `gpt4o`, `gpt4oMini`, `o3`, `o3Mini`.
+- `OpenAiResponseFormat` — controls text output format via named constructors:
+  `OpenAiResponseFormat.text()`, `.jsonObject()`, `.jsonSchema(name:, schema:, strict:)`.
+- `ReasoningEffort` — enum controlling reasoning depth: `low`, `medium`, `high`.
+  Maps to the OpenAI API string exactly via `.name`.
+- `OpenAiRateLimitInfo` — captures OpenAI's rate limit response headers automatically
+  after every request. Access via `OpenAiEngine.rateLimitInfo`.
+
+**Features:**
+- `organizationId` and `projectId` constructor parameters — sent as `OpenAI-Organization`
+  and `OpenAI-Project` headers on every request for proper billing and rate-limit scoping.
+- Smart defaults — `gpt54Mini` and `temperature: 0.7` when no config is given; drops
+  temperature to `0.3` automatically when `reasoningEffort` is set.
+- Detailed error messages per OpenAI `error.code` sub-cause — distinguishes
+  `invalid_api_key`, `no_such_organization`, `ip_not_allowed`, `insufficient_quota`,
+  and generic rate-limit errors with actionable fix links.
+- `countTokens()` uses `POST /v1/responses/input_tokens` with the full request body so
+  the count includes all config fields (format, stop sequences, reasoning, etc.).
+
+---
+
 ## 0.3.0
 
 ### Deprecated

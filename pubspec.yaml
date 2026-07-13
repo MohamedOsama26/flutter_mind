@@ -1,6 +1,6 @@
 name: flutter_mind
-description: "A Flutter AI package supporting cloud (Gemini) and offline local models — clean API, streaming, smart defaults, and built-in prompt engineering."
-version: 0.3.0
+description: "A Flutter AI package for Gemini and OpenAI — clean API, streaming, multi-turn chat, smart defaults, and built-in prompt engineering."
+version: 0.4.0
 homepage: https://github.com/MohamedOsama26/flutter_mind
 
 environment:

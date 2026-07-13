@@ -13,6 +13,7 @@
   <a href="https://pub.dev/packages/flutter_mind"><img src="https://img.shields.io/pub/likes/flutter_mind" alt="pub likes"/></a>
   <a href="https://pub.dev/packages/flutter_mind"><img src="https://img.shields.io/pub/points/flutter_mind" alt="pub points"/></a>
   <a href="https://github.com/MohamedOsama26/flutter_mind/blob/main/LICENSE"><img src="https://img.shields.io/github/license/MohamedOsama26/flutter_mind" alt="license"/></a>
+  <a href="https://ko-fi.com/mohamedosama99"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"/></a>
 </p>
 
 ---
@@ -46,7 +47,7 @@ Most AI packages for Flutter just wrap the API — you still have to write the p
 |---|---|---|
 | Google Gemini | ✅ v1 | Flash 2.5, Pro 2.5, Flash-Lite, and more |
 | Local Model (offline) | ⚠️ Deprecated — moved to [`flutter_mind_local`](https://pub.dev/packages/flutter_mind_local) | Any `.gguf` — Qwen, Llama, Gemma, Phi, Mistral, and more |
-| OpenAI | 🔜 v2 | GPT-4o, GPT-4o Mini |
+| OpenAI | ✅ v1 | GPT-5.5, GPT-5.4, GPT-5.4 Mini, GPT-5.4 Nano |
 | Anthropic Claude | 🔜 v2 | Sonnet, Opus, Haiku |
 | Grok | 🔜 v2 | — |
 | DeepSeek | 🔜 v2 | — |
@@ -57,7 +58,7 @@ Most AI packages for Flutter just wrap the API — you still have to write the p
 
 ```yaml
 dependencies:
-  flutter_mind: ^0.3.0
+  flutter_mind: ^0.4.0
 ```
 
 ```bash
@@ -95,7 +96,7 @@ Three lines in `main()`. Done.
 2. Sign in with your Google account
 3. Click **Create API Key** — no credit card required
 
-### OpenAI *(coming in v2)*
+### OpenAI
 
 1. Go to [platform.openai.com](https://platform.openai.com) → **API Keys** → **Create new secret key**
 
@@ -454,6 +455,126 @@ await summaryClient.send(userMessage: longDocument);
 
 ---
 
+## OpenAI
+
+Uses the [Responses API](https://platform.openai.com/docs/api-reference/responses) — OpenAI's latest generation API.
+
+### Basic usage
+
+```dart
+import 'package:flutter_mind/flutter_mind.dart';
+
+FlutterMind.init(
+  engine: OpenAiEngine(
+    apiKey: 'sk-...',
+    config: OpenAiConfig(
+      model: OpenAiModel.gpt54Mini,
+      systemPrompt: Prompt(role: 'helpful assistant'),
+      temperature: 0.7,
+    ),
+  ),
+);
+
+final response = await FlutterMind.send(userMessage: 'suggest a game');
+print(response.text);
+```
+
+Three lines in `main()`. Everything else works the same as with Gemini.
+
+### Streaming
+
+```dart
+FlutterMind.stream(userMessage: 'tell me a story').listen((chunk) {
+  setState(() => text += chunk);
+});
+```
+
+### Reasoning models
+
+For hard problems — coding, math, analysis — enable reasoning effort:
+
+```dart
+await FlutterMind.send(
+  userMessage: 'solve this equation',
+  config: OpenAiConfig(
+    model: OpenAiModel.gpt55,
+    reasoningEffort: ReasoningEffort.high, // low | medium | high
+    temperature: 0.3,                      // lower temp pairs well with reasoning
+  ),
+);
+```
+
+### Structured JSON output
+
+```dart
+// Guarantee valid JSON — any structure
+OpenAiConfig(
+  responseFormat: OpenAiResponseFormat.jsonObject(),
+)
+
+// Guarantee a specific structure with JSON Schema
+OpenAiConfig(
+  responseFormat: OpenAiResponseFormat.jsonSchema(
+    name: 'movie',
+    schema: {
+      'type': 'object',
+      'properties': {
+        'title': {'type': 'string'},
+        'year':  {'type': 'integer'},
+      },
+      'required': ['title', 'year'],
+    },
+  ),
+)
+```
+
+### Rate limit monitoring
+
+`OpenAiEngine` captures OpenAI's rate limit headers automatically after every request:
+
+```dart
+final openai = OpenAiEngine(apiKey: 'sk-...');
+await openai.send(userMessage: 'hello');
+
+final info = openai.rateLimitInfo;
+if (info != null && (info.remainingTokens ?? 999) < 1000) {
+  print('Warning: ${info.remainingTokens} tokens left. Resets in ${info.resetTokens}');
+}
+```
+
+### Organization and project headers
+
+If your key belongs to an organization or project, pass the IDs for proper billing and rate-limit scoping:
+
+```dart
+OpenAiEngine(
+  apiKey: 'sk-...',
+  organizationId: 'org-...',
+  projectId: 'proj-...',
+)
+```
+
+---
+
+## OpenAI Models
+
+API reference: [platform.openai.com/docs/api-reference/responses](https://platform.openai.com/docs/api-reference/responses)
+
+| Constant | Model ID | Best For |
+|---|---|---|
+| `OpenAiModel.gpt55` | gpt-5.5 | Flagship — highest capability |
+| `OpenAiModel.gpt54` | gpt-5.4 | High performance |
+| `OpenAiModel.gpt54Mini` | gpt-5.4-mini | Best price/performance — **default** |
+| `OpenAiModel.gpt54Nano` | gpt-5.4-nano | Fastest, lowest cost |
+
+Use `CustomModel` for any model not listed:
+
+```dart
+OpenAiConfig(model: CustomModel('gpt-6'))
+```
+
+---
+
 ## Local Model (Offline)
 
 > **⚠️ Moved to a dedicated package.** `LocalEngine`, `LocalConfig`, and `LocalEngineEvent`
@@ -486,6 +607,8 @@ history, and the full configuration reference.
 ---
 
 ## Gemini Models
+
+API reference: [ai.google.dev/api/generate-content](https://ai.google.dev/api/generate-content)
 
 | Constant | Model ID | Status | Best For |
 |---|---|---|---|
@@ -561,6 +684,7 @@ Use [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) for local `.env` f
 
 ### v1 — Current
 - [x] Google Gemini engine
+- [x] OpenAI engine (GPT-5 family via Responses API)
 - [x] Local model engine (llama.cpp — offline, no API key)
 - [x] Send and streaming
 - [x] Multi-turn conversation history
@@ -577,7 +701,6 @@ Use [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) for local `.env` f
 - [ ] Remove deprecated `LocalEngine`, `LocalConfig`, `LocalEngineEvent` from `flutter_mind`
 
 ### v2 — Coming Soon
-- [ ] OpenAI engine
 - [ ] Anthropic Claude engine
 - [ ] Response parser (JSON → typed Dart objects)
 - [ ] True token streaming for local models
