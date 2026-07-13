@@ -650,8 +650,8 @@ class GeminiEngine implements AiEngine {
   Future<List<Map<String, dynamic>>> getModels() async {
     try {
       final data = await _dio.get(
-        'https://api.openai.com/v1/models',
-        options: Options(headers: {'Authorization': 'Bearer $_apiKey'}),
+        'https://generativelanguage.googleapis.com/v1beta/models',
+        queryParameters: {'key': _apiKey},
       );
       final models = data.data['data'] as List<dynamic>;
       return models.map((model) => model as Map<String, dynamic>).toList();
